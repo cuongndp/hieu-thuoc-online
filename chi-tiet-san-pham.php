@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     $_SESSION['cart_message'] = "Đã thêm {$quantity} sản phẩm '{$product_name}' vào giỏ hàng!";
     
     // Redirect để tránh resubmit
-    header('Location: product-detail.php?id=' . $product_id . '&img=' . $selected_image);
+    header('Location: chi-tiet-san-pham.php?id=' . $product_id . '&img=' . $selected_image);
     exit;
 }
 
@@ -679,7 +679,7 @@ if ($product['han_su_dung']) {
                 <div class="thumbnail-list">
                     <?php foreach ($product_images as $index => $image): ?>
                         <div class="thumbnail <?php echo $index === $main_image_index ? 'active' : ''; ?>">
-                            <a href="product-detail.php?id=<?php echo $product_id; ?>&img=<?php echo $index; ?>">
+                            <a href="chi-tiet-san-pham.php?id=<?php echo $product_id; ?>&img=<?php echo $index; ?>">
                                 <img src="<?php echo htmlspecialchars($image['duong_dan_hinh_anh']); ?>" 
                                      alt="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
                             </a>
@@ -918,7 +918,7 @@ if ($product['han_su_dung']) {
                              alt="<?php echo htmlspecialchars($related['ten_san_pham']); ?>">
                         <h4><?php echo htmlspecialchars($related['ten_san_pham']); ?></h4>
                         <div class="price"><?php echo number_format($related['gia_khuyen_mai'] ?: $related['gia_ban'], 0, ',', '.'); ?>đ</div>
-                        <a href="product-detail.php?id=<?php echo $related['ma_san_pham']; ?>" class="btn">Xem chi tiết</a>
+                        <a href="chi-tiet-san-pham.php?id=<?php echo $related['ma_san_pham']; ?>" class="btn">Xem chi tiết</a>
                     </div>
                 <?php endforeach; ?>
             </div>

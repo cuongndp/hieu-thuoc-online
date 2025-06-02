@@ -1,5 +1,6 @@
 <?php
 session_start();
+include 'config/database.php';
 
 // Khởi tạo giỏ hàng nếu chưa có
 if (!isset($_SESSION['cart'])) {
@@ -66,6 +67,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Lấy giỏ hàng từ session
 $cart = $_SESSION['cart'] ?? [];
+
+// Lấy ảnh cho các sản phẩm trong giỏ hàng
+$product_images = [];
+if (!empty($cart)) {
+    $product_ids = array_keys($cart);
+    $placeholders = str_repeat('?,', count($product_ids) - 1) . '?';
+    
+    $images_sql = "SELECT ha.ma_san_pham, ha.duong_dan_hinh_anh 
+                   FROM hinh_anh_san_pham ha 
+                   WHERE ha.ma_san_pham IN ($placeholders) AND ha.la_hinh_chinh = TRUE";
+    
+    $images_stmt = $conn->prepare($images_sql);
+    $images_stmt->bind_param(str_repeat('i', count($product_ids)), ...$product_ids);
+    $images_stmt->execute();
+    $images_result = $images_stmt->get_result();
+    
+    while ($img = $images_result->fetch_assoc()) {
+        $product_images[$img['ma_san_pham']] = $img['duong_dan_hinh_anh'];
+    }
+}
 
 // Tính tổng tiền
 $subtotal = 0;
@@ -450,7 +471,7 @@ if ($checkout_message) {
                             <tr>
                                 <td>
                                     <div class="product-info">
-                                        <img src="https://via.placeholder.com/60x60?text=<?php echo urlencode($item['name']); ?>" 
+                                        <img src="<?php echo isset($product_images[$product_id]) ? htmlspecialchars($product_images[$product_id]) : 'https://via.placeholder.com/60x60?text=' . urlencode($item['name']); ?>" 
                                              alt="<?php echo htmlspecialchars($item['name']); ?>" class="product-image">
                                         <div class="product-details">
                                             <h4><?php echo htmlspecialchars($item['name']); ?></h4>
@@ -548,7 +569,6 @@ if ($checkout_message) {
                 </div>
             </div>
         </div>
-    </div>
     </footer>
 </body>
 </html>

@@ -140,6 +140,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
     <title><?php echo htmlspecialchars($category_info['ten_danh_muc']); ?> - VitaMeds</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./css/danh-muc.css">
+    <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
@@ -407,7 +408,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <!-- <footer class="footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
@@ -418,6 +419,91 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
                     <h3>Liên hệ</h3>
                     <p><i class="fas fa-phone"></i> 1900-1234</p>
                     <p><i class="fas fa-envelope"></i> info@vitameds.com</p>
+                </div>
+            </div>
+        </div>
+    </footer> -->
+
+      <footer class="footer">
+        <div class="container">
+            <!-- Team Members Section -->
+            <div class="team-section">
+                <div class="section-title" style="margin: 0 0 40px 0;">
+                    <h2 style="color: #ecf0f1;">Thành Viên Nhóm</h2>
+                    <p style="color: #bdc3c7;">Đội ngũ phát triển website VitaMeds</p>
+                </div>
+                
+                <div class="team-grid">
+                    <div class="team-member">
+                        <div class="member-avatar">A</div>
+                        <div class="member-name">Nguyễn Văn An</div>
+                        <div class="member-role">Team Leader - Backend Developer</div>
+                        <div class="member-id">MSSV: 21010001</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">B</div>
+                        <div class="member-name">Trần Thị Bình</div>
+                        <div class="member-role">Frontend Developer - UI/UX</div>
+                        <div class="member-id">MSSV: 21010002</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">C</div>
+                        <div class="member-name">Lê Minh Cường</div>
+                        <div class="member-role">Database Administrator</div>
+                        <div class="member-id">MSSV: 21010003</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">D</div>
+                        <div class="member-name">Phạm Thị Dung</div>
+                        <div class="member-role">Quality Assurance - Tester</div>
+                        <div class="member-id">MSSV: 21010004</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>VitaMeds</h3>
+                    <p>Đồ án môn học: Lập trình Web<br>
+                    Trường: Đại học Giao thông vận tải</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="#"><i class="fas fa-envelope"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Thông Tin Dự Án</h3>
+                    <ul>
+                        <li><a href="#">Mô tả dự án</a></li>
+                        <li><a href="#">Tài liệu kỹ thuật</a></li>
+                        <li><a href="#">Database Schema</a></li>
+                        <li><a href="#">API Documentation</a></li>
+                        <li><a href="#">Source Code</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Công Nghệ Sử Dụng</h3>
+                    <ul>
+                        <li>Frontend: HTML5, CSS3, JavaScript</li>
+                        <li>Backend: PHP, MySQL</li>
+                        <li>Framework: Bootstrap</li>
+                        <li>Tools: VSCode, phpMyAdmin</li>
+                        <li>Version Control: Git, GitHub</li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Liên Hệ Nhóm</h3>
+                    <p><i class="fas fa-envelope"></i> vitameds.team@student.uit.edu.vn</p>
+                    <p><i class="fas fa-phone"></i> (+84) 123-456-789</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Đại học Giao thông vận tải</p>
                 </div>
             </div>
         </div>

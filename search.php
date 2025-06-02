@@ -1,0 +1,769 @@
+<?php
+session_start();
+include 'config/database.php';
+
+// Xử lý add to cart trước khi hiển thị
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+        header('Location: Login.php');
+        exit;
+    }
+    
+    $product_id = $_POST['product_id'] ?? 0;
+    $product_name = $_POST['product_name'] ?? '';
+    $product_price = $_POST['product_price'] ?? 0;
+    
+    if (!isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+    
+    if (isset($_SESSION['cart'][$product_id])) {
+        $_SESSION['cart'][$product_id]['quantity']++;
+    } else {
+        $_SESSION['cart'][$product_id] = [
+            'name' => $product_name,
+            'price' => $product_price,
+            'quantity' => 1
+        ];
+    }
+    
+    // Redirect để tránh resubmit
+    header('Location: ' . $_SERVER['REQUEST_URI']);
+    exit;
+}
+
+// Lấy tham số tìm kiếm
+$search_query = trim($_GET['q'] ?? '');
+$category_filter = $_GET['cat'] ?? 'all';
+$sort_by = $_GET['sort'] ?? 'relevance';
+$price_filter = $_GET['price'] ?? 'all';
+$page = intval($_GET['page'] ?? 1);
+$per_page = 12;
+$offset = ($page - 1) * $per_page;
+
+// Thống kê tìm kiếm
+$total_products = 0;
+$search_results = [];
+
+if (!empty($search_query)) {
+    // Tạo query tìm kiếm với LIKE
+    $search_sql = "
+        SELECT 
+            sp.ma_san_pham,
+            sp.ten_san_pham,
+            sp.gia_ban,
+            sp.gia_khuyen_mai,
+            sp.mo_ta,
+            sp.can_don_thuoc,
+            sp.san_pham_noi_bat,
+            sp.ten_hoat_chat,
+            sp.ham_luong,
+            dm.ten_danh_muc,
+            nsx.ten_nha_san_xuat,
+            ha.duong_dan_hinh_anh
+        FROM san_pham_thuoc sp
+        LEFT JOIN danh_muc_thuoc dm ON sp.ma_danh_muc = dm.ma_danh_muc
+        LEFT JOIN nha_san_xuat nsx ON sp.ma_nha_san_xuat = nsx.ma_nha_san_xuat
+        LEFT JOIN hinh_anh_san_pham ha ON sp.ma_san_pham = ha.ma_san_pham AND ha.la_hinh_chinh = TRUE
+        WHERE sp.trang_thai_hoat_dong = TRUE
+        AND (
+            sp.ten_san_pham LIKE ? 
+            OR sp.mo_ta LIKE ?
+            OR sp.ten_hoat_chat LIKE ?
+            OR nsx.ten_nha_san_xuat LIKE ?
+        )
+    ";
+    
+    // Thêm filter theo danh mục
+    if ($category_filter !== 'all') {
+        $search_sql .= " AND sp.ma_danh_muc = ?";
+    }
+    
+    // Thêm filter theo giá
+    if ($price_filter !== 'all') {
+        if ($price_filter === '500000+') {
+            $search_sql .= " AND (COALESCE(sp.gia_khuyen_mai, sp.gia_ban) >= 500000)";
+        } else {
+            $price_parts = explode('-', $price_filter);
+            if (count($price_parts) === 2) {
+                $min_price = intval($price_parts[0]);
+                $max_price = intval($price_parts[1]);
+                $search_sql .= " AND (COALESCE(sp.gia_khuyen_mai, sp.gia_ban) BETWEEN $min_price AND $max_price)";
+            }
+        }
+    }
+    
+    // Thêm ORDER BY
+    switch ($sort_by) {
+        case 'name-asc':
+            $search_sql .= " ORDER BY sp.ten_san_pham ASC";
+            break;
+        case 'name-desc':
+            $search_sql .= " ORDER BY sp.ten_san_pham DESC";
+            break;
+        case 'price-asc':
+            $search_sql .= " ORDER BY COALESCE(sp.gia_khuyen_mai, sp.gia_ban) ASC";
+            break;
+        case 'price-desc':
+            $search_sql .= " ORDER BY COALESCE(sp.gia_khuyen_mai, sp.gia_ban) DESC";
+            break;
+        case 'newest':
+            $search_sql .= " ORDER BY sp.ngay_tao DESC";
+            break;
+        default: // relevance
+            $search_sql .= " ORDER BY sp.san_pham_noi_bat DESC, sp.ten_san_pham ASC";
+            break;
+    }
+    
+    // Thêm LIMIT cho pagination
+    $search_sql .= " LIMIT ? OFFSET ?";
+    
+    // Chuẩn bị tham số
+    $search_param = "%{$search_query}%";
+    $params = [$search_param, $search_param, $search_param, $search_param];
+    $param_types = "ssss";
+    
+    if ($category_filter !== 'all') {
+        $params[] = intval($category_filter);
+        $param_types .= "i";
+    }
+    
+    $params[] = $per_page;
+    $params[] = $offset;
+    $param_types .= "ii";
+    
+    // Thực hiện query
+    $search_stmt = $conn->prepare($search_sql);
+    $search_stmt->bind_param($param_types, ...$params);
+    $search_stmt->execute();
+    $search_result = $search_stmt->get_result();
+    
+    while ($row = $search_result->fetch_assoc()) {
+        $search_results[] = $row;
+    }
+    
+    // Đếm tổng số kết quả (cho pagination)
+    $count_sql = str_replace("SELECT sp.ma_san_pham, sp.ten_san_pham, sp.gia_ban, sp.gia_khuyen_mai, sp.mo_ta, sp.can_don_thuoc, sp.san_pham_noi_bat, sp.ten_hoat_chat, sp.ham_luong, dm.ten_danh_muc, nsx.ten_nha_san_xuat, ha.duong_dan_hinh_anh", "SELECT COUNT(*)", $search_sql);
+    $count_sql = preg_replace('/ORDER BY.*LIMIT.*OFFSET.*$/', '', $count_sql);
+    
+    $count_params = array_slice($params, 0, -2); // Bỏ LIMIT và OFFSET
+    $count_types = substr($param_types, 0, -2);
+    
+    $count_stmt = $conn->prepare($count_sql);
+    $count_stmt->bind_param($count_types, ...$count_params);
+    $count_stmt->execute();
+    $count_result = $count_stmt->get_result();
+    $count_row = $count_result->fetch_row();
+$total_products = $count_row ? $count_row[0] : 0;
+}
+
+// Lấy danh sách danh mục cho filter
+$categories_sql = "SELECT ma_danh_muc, ten_danh_muc FROM danh_muc_thuoc WHERE trang_thai_hoat_dong = TRUE ORDER BY ten_danh_muc";
+$categories_result = $conn->query($categories_sql);
+$categories = [];
+while ($cat = $categories_result->fetch_assoc()) {
+    $categories[] = $cat;
+}
+
+// Tính pagination
+$total_pages = ceil($total_products / $per_page);
+?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo !empty($search_query) ? 'Tìm kiếm: ' . htmlspecialchars($search_query) : 'Tìm kiếm sản phẩm'; ?> - VitaMeds</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/index.css">
+    <style>
+        .search-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .search-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .search-box-large {
+            max-width: 600px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .search-box-large input {
+            width: 100%;
+            padding: 15px 60px 15px 20px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 30px;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .search-box-large button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+        }
+
+        .search-results-info {
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .search-filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .filters-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .filter-select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            border-color: #4285f4;
+        }
+
+        .filter-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: #3367d6;
+        }
+
+        .search-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .product-badge.prescription {
+            background: #f39c12;
+        }
+
+        .product-badge.featured {
+            background: #27ae60;
+        }
+
+        .product-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            overflow: hidden;
+            border: 2px solid #f0f0f0;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-card h3 a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .product-card h3 a:hover {
+            color: #4285f4;
+        }
+
+        .product-category {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .product-manufacturer {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .current-price {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .old-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 1rem;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-to-cart {
+            flex: 1;
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .add-to-cart:hover {
+            background: #3367d6;
+            transform: translateY(-2px);
+        }
+
+        .view-detail {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e1e8ed;
+            padding: 12px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .view-detail:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 40px;
+        }
+
+        .page-btn {
+            padding: 10px 15px;
+            border: 2px solid #e1e8ed;
+            background: white;
+            color: #333;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover, .page-btn.active {
+            background: #4285f4;
+            color: white;
+            border-color: #4285f4;
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .search-suggestions {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .suggestions-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .suggestion-tag {
+            background: #f0f8ff;
+            color: #4285f4;
+            padding: 5px 12px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-tag:hover {
+            background: #4285f4;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .search-results {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+
+            .filters-row {
+                grid-template-columns: 1fr;
+            }
+
+            .product-actions {
+                flex-direction: column;
+            }
+
+            .add-to-cart {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+
+    <!-- Search Header -->
+    <div class="search-header">
+        <div class="container">
+            <h1>Tìm kiếm sản phẩm</h1>
+            <div class="search-box-large">
+                <form method="GET" action="search.php">
+                    <input type="text" name="q" placeholder="Nhập tên thuốc, hoạt chất, thương hiệu..." 
+                           value="<?php echo htmlspecialchars($search_query); ?>" required>
+                    <button type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <?php if (!empty($search_query)): ?>
+            <!-- Search Results Info -->
+            <div class="search-results-info">
+                <h2>Kết quả tìm kiếm cho: "<?php echo htmlspecialchars($search_query); ?>"</h2>
+                <p>Tìm thấy <?php echo $total_products; ?> sản phẩm</p>
+            </div>
+
+            <!-- Search Filters -->
+            <div class="search-filters">
+                <form method="GET" action="search.php">
+                    <input type="hidden" name="q" value="<?php echo htmlspecialchars($search_query); ?>">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label>Danh mục:</label>
+                            <select name="cat" class="filter-select">
+                                <option value="all" <?php echo $category_filter === 'all' ? 'selected' : ''; ?>>Tất cả danh mục</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?php echo $cat['ma_danh_muc']; ?>" 
+                                            <?php echo $category_filter == $cat['ma_danh_muc'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($cat['ten_danh_muc']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Sắp xếp:</label>
+                            <select name="sort" class="filter-select">
+                                <option value="relevance" <?php echo $sort_by === 'relevance' ? 'selected' : ''; ?>>Liên quan nhất</option>
+                                <option value="name-asc" <?php echo $sort_by === 'name-asc' ? 'selected' : ''; ?>>Tên A-Z</option>
+                                <option value="name-desc" <?php echo $sort_by === 'name-desc' ? 'selected' : ''; ?>>Tên Z-A</option>
+                                <option value="price-asc" <?php echo $sort_by === 'price-asc' ? 'selected' : ''; ?>>Giá thấp - cao</option>
+                                <option value="price-desc" <?php echo $sort_by === 'price-desc' ? 'selected' : ''; ?>>Giá cao - thấp</option>
+                                <option value="newest" <?php echo $sort_by === 'newest' ? 'selected' : ''; ?>>Mới nhất</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label>Khoảng giá:</label>
+                            <select name="price" class="filter-select">
+                                <option value="all" <?php echo $price_filter === 'all' ? 'selected' : ''; ?>>Tất cả giá</option>
+                                <option value="0-50000" <?php echo $price_filter === '0-50000' ? 'selected' : ''; ?>>Dưới 50.000đ</option>
+                                <option value="50000-200000" <?php echo $price_filter === '50000-200000' ? 'selected' : ''; ?>>50.000đ - 200.000đ</option>
+                                <option value="200000-500000" <?php echo $price_filter === '200000-500000' ? 'selected' : ''; ?>>200.000đ - 500.000đ</option>
+                                <option value="500000+" <?php echo $price_filter === '500000+' ? 'selected' : ''; ?>>Trên 500.000đ</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <button type="submit" class="filter-btn">
+                                <i class="fas fa-filter"></i> Lọc
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Search Results -->
+            <?php if (!empty($search_results)): ?>
+                <div class="search-results">
+                    <?php foreach ($search_results as $product): ?>
+                        <div class="product-card">
+                            <?php 
+                            // Tính badge
+                            if ($product['can_don_thuoc']) {
+                                echo '<div class="product-badge prescription">Kê đơn</div>';
+                            } elseif ($product['gia_khuyen_mai'] && $product['gia_khuyen_mai'] < $product['gia_ban']) {
+                                $discount = round((($product['gia_ban'] - $product['gia_khuyen_mai']) / $product['gia_ban']) * 100);
+                                echo '<div class="product-badge">-' . $discount . '%</div>';
+                            } elseif ($product['san_pham_noi_bat']) {
+                                echo '<div class="product-badge featured">Nổi bật</div>';
+                            }
+                            ?>
+                            
+                            <div class="product-image">
+                                <img src="<?php echo $product['duong_dan_hinh_anh'] ?: 'https://via.placeholder.com/150x150?text=' . urlencode($product['ten_san_pham']); ?>" 
+                                     alt="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                            </div>
+                            
+                            <div class="product-category"><?php echo htmlspecialchars($product['ten_danh_muc']); ?></div>
+                            
+                            <h3>
+                                <a href="product-detail.php?id=<?php echo $product['ma_san_pham']; ?>">
+                                    <?php echo htmlspecialchars($product['ten_san_pham']); ?>
+                                </a>
+                            </h3>
+                            
+                            <div class="product-manufacturer"><?php echo htmlspecialchars($product['ten_nha_san_xuat'] ?: 'Không rõ'); ?></div>
+                            
+                            <?php if ($product['ten_hoat_chat'] || $product['ham_luong']): ?>
+                            <div class="product-manufacturer">
+                                <?php echo htmlspecialchars($product['ten_hoat_chat']); ?>
+                                <?php if ($product['ham_luong']): ?>
+                                    - <?php echo htmlspecialchars($product['ham_luong']); ?>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+                            
+                            <div class="product-price">
+                                <span class="current-price">
+                                    <?php echo number_format($product['gia_khuyen_mai'] ?: $product['gia_ban'], 0, ',', '.'); ?>đ
+                                </span>
+                                <?php if ($product['gia_khuyen_mai'] && $product['gia_khuyen_mai'] < $product['gia_ban']): ?>
+                                    <span class="old-price"><?php echo number_format($product['gia_ban'], 0, ',', '.'); ?>đ</span>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="product-actions">
+                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="add_to_cart" value="1">
+                                        <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
+                                        <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                                        <input type="hidden" name="product_price" value="<?php echo $product['gia_khuyen_mai'] ?: $product['gia_ban']; ?>">
+                                        <button type="submit" class="add-to-cart">
+                                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <a href="Login.php" class="add-to-cart">
+                                        <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                    </a>
+                                <?php endif; ?>
+                                <a href="chi-tiet-san-pham.php?id=<?php echo $product['ma_san_pham']; ?>" class="view-detail" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="pagination">
+                    <?php if ($page > 1): ?>
+                        <a href="?q=<?php echo urlencode($search_query); ?>&cat=<?php echo urlencode($category_filter); ?>&sort=<?php echo urlencode($sort_by); ?>&price=<?php echo urlencode($price_filter); ?>&page=<?php echo $page - 1; ?>" class="page-btn">
+                            <i class="fas fa-chevron-left"></i> Trước
+                        </a>
+                    <?php endif; ?>
+
+                    <?php
+                    $start_page = max(1, $page - 2);
+                    $end_page = min($total_pages, $page + 2);
+                    
+                    for ($i = $start_page; $i <= $end_page; $i++):
+                    ?>
+                        <a href="?q=<?php echo urlencode($search_query); ?>&cat=<?php echo urlencode($category_filter); ?>&sort=<?php echo urlencode($sort_by); ?>&price=<?php echo urlencode($price_filter); ?>&page=<?php echo $i; ?>" 
+                           class="page-btn <?php echo $i === $page ? 'active' : ''; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $total_pages): ?>
+                        <a href="?q=<?php echo urlencode($search_query); ?>&cat=<?php echo urlencode($category_filter); ?>&sort=<?php echo urlencode($sort_by); ?>&price=<?php echo urlencode($price_filter); ?>&page=<?php echo $page + 1; ?>" class="page-btn">
+                            Sau <i class="fas fa-chevron-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
+            <?php else: ?>
+                <!-- No Results -->
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <h3>Không tìm thấy sản phẩm</h3>
+                    <p>Không tìm thấy sản phẩm nào phù hợp với từ khóa "<?php echo htmlspecialchars($search_query); ?>"</p>
+                    <p>Vui lòng thử lại với từ khóa khác hoặc kiểm tra chính tả.</p>
+                </div>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <!-- Search Suggestions -->
+            <div class="search-suggestions">
+                <h3>Gợi ý tìm kiếm phổ biến:</h3>
+                <div class="suggestions-list">
+                    <a href="search.php?q=paracetamol" class="suggestion-tag">Paracetamol</a>
+                    <a href="search.php?q=vitamin c" class="suggestion-tag">Vitamin C</a>
+                    <a href="search.php?q=amoxicillin" class="suggestion-tag">Amoxicillin</a>
+                    <a href="search.php?q=omega 3" class="suggestion-tag">Omega 3</a>
+                    <a href="search.php?q=calcium" class="suggestion-tag">Calcium</a>
+                    <a href="search.php?q=thuốc cảm cúm" class="suggestion-tag">Thuốc cảm cúm</a>
+                    <a href="search.php?q=thuốc đau đầu" class="suggestion-tag">Thuốc đau đầu</a>
+                    <a href="search.php?q=thuốc dạ dày" class="suggestion-tag">Thuốc dạ dày</a>
+                </div>
+            </div>
+
+            <!-- Popular Categories -->
+            <div class="search-suggestions">
+                <h3>Danh mục phổ biến:</h3>
+                <div class="suggestions-list">
+                    <a href="danh-muc.php?cat=thuoc-khong-ke-don" class="suggestion-tag">Thuốc không kê đơn</a>
+                    <a href="danh-muc.php?cat=vitamin-khoang-chat" class="suggestion-tag">Vitamin & Khoáng chất</a>
+                    <a href="danh-muc.php?cat=thuc-pham-chuc-nang" class="suggestion-tag">Thực phẩm chức năng</a>
+                    <a href="danh-muc.php?cat=duoc-my-pham" class="suggestion-tag">Dược mỹ phẩm</a>
+                    <a href="danh-muc.php?cat=thiet-bi-y-te" class="suggestion-tag">Thiết bị y tế</a>
+                    <a href="danh-muc.php?cat=me-va-be" class="suggestion-tag">Mẹ & bé</a>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>VitaMeds</h3>
+                    <p>Hiệu thuốc trực tuyến uy tín</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Liên hệ</h3>
+                    <p><i class="fas fa-phone"></i> 1900-1234</p>
+                    <p><i class="fas fa-envelope"></i> info@vitameds.com</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,38 +1,56 @@
 <?php
-// includes/header.php - Header component động với PHP thuần
+// includes/header.php - Header component với database
 if (!isset($_SESSION)) {
     session_start();
 }
 
+include_once 'config/database.php';
+
 // Kiểm tra trạng thái đăng nhập
 $is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
 $user_name = $_SESSION['user_name'] ?? '';
+$user_id = $_SESSION['user_id'] ?? 0;
 
-// Xử lý add to cart nếu có
+// Xử lý add to cart - LƯU VÀO DATABASE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     if (!$is_logged_in) {
         header('Location: Login.php');
         exit;
     }
     
-    // Xử lý thêm vào giỏ hàng ở đây
     $product_id = $_POST['product_id'] ?? 0;
-    $product_name = $_POST['product_name'] ?? '';
-    $product_price = $_POST['product_price'] ?? 0;
+    $quantity = 1;
     
-    // Lưu vào session cart
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
-    
-    if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id]['quantity']++;
-    } else {
-        $_SESSION['cart'][$product_id] = [
-            'name' => $product_name,
-            'price' => $product_price,
-            'quantity' => 1
-        ];
+    if ($product_id > 0 && $user_id > 0) {
+        try {
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("ii", $user_id, $product_id);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Nếu đã có, tăng số lượng
+                $row = $result->fetch_assoc();
+                $new_quantity = $row['so_luong'] + $quantity;
+                
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+                $update_stmt->execute();
+            } else {
+                // Nếu chưa có, thêm mới
+                $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("iii", $user_id, $product_id, $quantity);
+                $insert_stmt->execute();
+            }
+            
+            $_SESSION['success_message'] = "Đã thêm sản phẩm vào giỏ hàng!";
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Có lỗi xảy ra: " . $e->getMessage();
+        }
     }
     
     // Redirect về trang hiện tại để tránh resubmit
@@ -46,11 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_dropdown'])) {
     $show_dropdown = $_POST['dropdown_state'] === 'closed';
 }
 
-// Tính tổng số sản phẩm trong giỏ hàng
+// Tính tổng số sản phẩm trong giỏ hàng từ DATABASE
 $cart_count = 0;
-if (isset($_SESSION['cart'])) {
-    foreach ($_SESSION['cart'] as $item) {
-        $cart_count += $item['quantity'];
+if ($is_logged_in && $user_id > 0) {
+    try {
+        $cart_count_sql = "SELECT SUM(so_luong) as total_items FROM gio_hang WHERE ma_nguoi_dung = ?";
+        $cart_count_stmt = $conn->prepare($cart_count_sql);
+        $cart_count_stmt->bind_param("i", $user_id);
+        $cart_count_stmt->execute();
+        $cart_count_result = $cart_count_stmt->get_result();
+        $cart_count_row = $cart_count_result->fetch_assoc();
+        $cart_count = $cart_count_row['total_items'] ?? 0;
+    } catch (Exception $e) {
+        $cart_count = 0;
     }
 }
 ?>
@@ -97,7 +123,7 @@ if (isset($_SESSION['cart'])) {
                         <?php if ($show_dropdown): ?>
                         <div class="user-dropdown show" id="user-dropdown">
                             <a href="profile.php"><i class="fas fa-user"></i> Thông tin cá nhân</a>
-                            <a href="orders.php"><i class="fas fa-shopping-bag"></i> Đơn hàng của tôi</a>
+                            <a href="don-hang.php"><i class="fas fa-shopping-bag"></i> Đơn hàng của tôi</a>
                             <a href="change-password.php"><i class="fas fa-key"></i> Đổi mật khẩu</a>
                             <hr>
                             <a href="logout.php" class="logout-link"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>

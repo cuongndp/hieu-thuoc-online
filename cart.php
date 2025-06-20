@@ -2,25 +2,44 @@
 session_start();
 include 'config/database.php';
 
-// Khởi tạo giỏ hàng nếu chưa có
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
+// Kiểm tra đăng nhập
+if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+    // Nếu chưa đăng nhập, chuyển hướng đến trang login
+    header('Location: login.php');
+    exit;
 }
+
+$user_id = $_SESSION['user_id'] ?? 0;
 
 // Xử lý add to cart từ header
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     $product_id = $_POST['product_id'] ?? 0;
-    $product_name = $_POST['product_name'] ?? '';
-    $product_price = $_POST['product_price'] ?? 0;
+    $quantity = 1;
     
-    if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id]['quantity']++;
-    } else {
-        $_SESSION['cart'][$product_id] = [
-            'name' => $product_name,
-            'price' => $product_price,
-            'quantity' => 1
-        ];
+    if ($product_id > 0) {
+        // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+        $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param("ii", $user_id, $product_id);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            // Nếu đã có, tăng số lượng
+            $row = $result->fetch_assoc();
+            $new_quantity = $row['so_luong'] + $quantity;
+            
+            $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $update_stmt = $conn->prepare($update_sql);
+            $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+            $update_stmt->execute();
+        } else {
+            // Nếu chưa có, thêm mới
+            $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+            $insert_stmt = $conn->prepare($insert_sql);
+            $insert_stmt->bind_param("iii", $user_id, $product_id, $quantity);
+            $insert_stmt->execute();
+        }
     }
     
     // Redirect để tránh resubmit
@@ -37,27 +56,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $product_id = $_POST['product_id'] ?? 0;
             $quantity = max(1, intval($_POST['quantity'] ?? 1));
             
-            if (isset($_SESSION['cart'][$product_id])) {
-                $_SESSION['cart'][$product_id]['quantity'] = $quantity;
+            if ($product_id > 0) {
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $quantity, $user_id, $product_id);
+                $update_stmt->execute();
             }
             break;
             
         case 'remove_item':
             $product_id = $_POST['product_id'] ?? 0;
-            if (isset($_SESSION['cart'][$product_id])) {
-                unset($_SESSION['cart'][$product_id]);
+            if ($product_id > 0) {
+                $delete_sql = "DELETE FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $delete_stmt = $conn->prepare($delete_sql);
+                $delete_stmt->bind_param("ii", $user_id, $product_id);
+                $delete_stmt->execute();
             }
             break;
             
         case 'clear_cart':
-            $_SESSION['cart'] = [];
+            $clear_sql = "DELETE FROM gio_hang WHERE ma_nguoi_dung = ?";
+            $clear_stmt = $conn->prepare($clear_sql);
+            $clear_stmt->bind_param("i", $user_id);
+            $clear_stmt->execute();
             break;
             
         case 'checkout':
-            // Xử lý thanh toán
-            $total_products = array_sum(array_column($_SESSION['cart'], 'quantity'));
-            $_SESSION['checkout_message'] = "Tính năng thanh toán đang được phát triển!\n\nTổng số sản phẩm: " . $total_products;
-            break;
+            header('Location: thanh-toan.php');
+    exit;
+    break;
+            
     }
     
     // Redirect để tránh resubmit
@@ -65,27 +93,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Lấy giỏ hàng từ session
-$cart = $_SESSION['cart'] ?? [];
+// Debug thông tin
+echo "<!-- Debug: User ID = " . $user_id . " -->";
 
-// Lấy ảnh cho các sản phẩm trong giỏ hàng
-$product_images = [];
+// Lấy giỏ hàng từ database
+$cart_sql = "SELECT ma_san_pham, so_luong FROM gio_hang WHERE ma_nguoi_dung = ? ORDER BY ngay_them DESC";
+
+$cart_stmt = $conn->prepare($cart_sql);
+$cart_stmt->bind_param("i", $user_id);
+$cart_stmt->execute();
+$cart_result = $cart_stmt->get_result();
+
+echo "<!-- Debug: Số sản phẩm trong giỏ = " . $cart_result->num_rows . " -->";
+
+// Định nghĩa thông tin sản phẩm mẫu
+$product_info = [
+    1 => ['name' => 'Paracetamol 500mg', 'price' => 25000],
+    2 => ['name' => 'Vitamin C 1000mg', 'price' => 120000],
+    3 => ['name' => 'Amoxicillin 250mg', 'price' => 45000],
+    4 => ['name' => 'Omega-3 Fish Oil', 'price' => 180000],
+    5 => ['name' => 'Calcium + D3', 'price' => 95000],
+    6 => ['name' => 'Glucosamine 1500mg', 'price' => 320000],
+];
+
+$cart = [];
+
+// Lấy danh sách sản phẩm trong giỏ hàng
+while ($row = $cart_result->fetch_assoc()) {
+    $product_id = $row['ma_san_pham'];
+    $quantity = $row['so_luong'];
+    
+    echo "<!-- Debug: Sản phẩm ID = " . $product_id . ", Số lượng = " . $quantity . " -->";
+    
+    // Lấy thông tin sản phẩm
+    $product_name = isset($product_info[$product_id]) ? $product_info[$product_id]['name'] : "Sản phẩm " . $product_id;
+    $product_price = isset($product_info[$product_id]) ? $product_info[$product_id]['price'] : 100000;
+    
+    $cart[$product_id] = [
+        'name' => $product_name,
+        'price' => $product_price,
+        'quantity' => $quantity,
+        'image' => "https://via.placeholder.com/60x60?text=" . urlencode($product_name)
+    ];
+    
+    echo "<!-- Debug: Đã thêm vào cart - " . $product_name . " x " . $quantity . " -->";
+}
+
+echo "<!-- Debug: Tổng số items trong cart array = " . count($cart) . " -->";
 if (!empty($cart)) {
-    $product_ids = array_keys($cart);
-    $placeholders = str_repeat('?,', count($product_ids) - 1) . '?';
-    
-    $images_sql = "SELECT ha.ma_san_pham, ha.duong_dan_hinh_anh 
-                   FROM hinh_anh_san_pham ha 
-                   WHERE ha.ma_san_pham IN ($placeholders) AND ha.la_hinh_chinh = TRUE";
-    
-    $images_stmt = $conn->prepare($images_sql);
-    $images_stmt->bind_param(str_repeat('i', count($product_ids)), ...$product_ids);
-    $images_stmt->execute();
-    $images_result = $images_stmt->get_result();
-    
-    while ($img = $images_result->fetch_assoc()) {
-        $product_images[$img['ma_san_pham']] = $img['duong_dan_hinh_anh'];
-    }
+    echo "<!-- Debug: Danh sách product IDs: " . implode(', ', array_keys($cart)) . " -->";
 }
 
 // Tính tổng tiền
@@ -321,25 +377,6 @@ if ($checkout_message) {
             color: #2c3e50;
         }
         
-        .login-prompt {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 30px;
-            text-align: center;
-        }
-        
-        .login-prompt h4 {
-            margin: 0 0 10px 0;
-            color: #856404;
-        }
-        
-        .login-prompt p {
-            margin: 0 0 15px 0;
-            color: #856404;
-        }
-        
         .alert {
             padding: 15px;
             margin: 20px 30px;
@@ -437,15 +474,7 @@ if ($checkout_message) {
                 </div>
             <?php endif; ?>
             
-            <?php if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']): ?>
-                <div class="login-prompt">
-                    <h4><i class="fas fa-exclamation-triangle"></i> Cần đăng nhập</h4>
-                    <p>Vui lòng đăng nhập để xem giỏ hàng và tiến hành thanh toán</p>
-                    <a href="Login.php" class="btn btn-primary">
-                        <i class="fas fa-sign-in-alt"></i> Đăng nhập ngay
-                    </a>
-                </div>
-            <?php elseif (empty($cart)): ?>
+            <?php if (empty($cart)): ?>
                 <div class="empty-cart">
                     <i class="fas fa-shopping-cart"></i>
                     <h3>Giỏ hàng trống</h3>
@@ -471,7 +500,7 @@ if ($checkout_message) {
                             <tr>
                                 <td>
                                     <div class="product-info">
-                                        <img src="<?php echo isset($product_images[$product_id]) ? htmlspecialchars($product_images[$product_id]) : 'https://via.placeholder.com/60x60?text=' . urlencode($item['name']); ?>" 
+                                        <img src="<?php echo $item['image'] ? htmlspecialchars($item['image']) : 'https://via.placeholder.com/60x60?text=' . urlencode($item['name']); ?>" 
                                              alt="<?php echo htmlspecialchars($item['name']); ?>" class="product-image">
                                         <div class="product-details">
                                             <h4><?php echo htmlspecialchars($item['name']); ?></h4>
@@ -544,7 +573,7 @@ if ($checkout_message) {
                     <div>
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="action" value="checkout">
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" >
                                 <i class="fas fa-credit-card"></i> Tiến hành thanh toán
                             </button>
                         </form>

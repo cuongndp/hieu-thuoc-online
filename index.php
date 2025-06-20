@@ -1,6 +1,85 @@
 <?php
 session_start();
 include 'config/database.php';
+
+// Xử lý add to cart - LƯU VÀO DATABASE
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+    $product_id = $_POST['product_id'] ?? 0;
+    $quantity = 1;
+    
+    // Kiểm tra đăng nhập
+    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+        header('Location: Login.php');
+        exit;
+    }
+    
+    $user_id = $_SESSION['user_id'] ?? 0;
+    
+    // Debug
+    error_log("Add to Cart - User ID: $user_id, Product ID: $product_id");
+    
+    if ($product_id > 0 && $user_id > 0) {
+        try {
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("ii", $user_id, $product_id);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Nếu đã có, tăng số lượng
+                $row = $result->fetch_assoc();
+                $new_quantity = $row['so_luong'] + $quantity;
+                
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+                
+                if ($update_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã cập nhật số lượng sản phẩm trong giỏ hàng!";
+                    error_log("Updated quantity for product $product_id");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi cập nhật sản phẩm!";
+                    error_log("Failed to update product $product_id");
+                }
+            } else {
+                // Nếu chưa có, thêm mới
+                $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("iii", $user_id, $product_id, $quantity);
+                
+                if ($insert_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã thêm sản phẩm vào giỏ hàng!";
+                    error_log("Added new product $product_id to cart");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi thêm sản phẩm!";
+                    error_log("Failed to insert product $product_id");
+                }
+            }
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Có lỗi xảy ra: " . $e->getMessage();
+            error_log("Exception in add to cart: " . $e->getMessage());
+        }
+    } else {
+        $_SESSION['error_message'] = "Thông tin không hợp lệ!";
+        error_log("Invalid data - User ID: $user_id, Product ID: $product_id");
+    }
+    
+    // Redirect để tránh resubmit
+    header('Location: index.php');
+    exit;
+}
+
+// Lấy thông báo nếu có
+$success_message = $_SESSION['success_message'] ?? '';
+$error_message = $_SESSION['error_message'] ?? '';
+if ($success_message) {
+    unset($_SESSION['success_message']);
+}
+if ($error_message) {
+    unset($_SESSION['error_message']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -10,9 +89,67 @@ include 'config/database.php';
     <title>VitaMeds - Hiệu Thuốc Trực Tuyến Uy Tín</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/index.css">
+    <style>
+        .success-message, .error-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px auto;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .success-message .close-btn, .error-message .close-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #155724;
+        }
+        
+        .success-message .close-btn:hover, .error-message .close-btn:hover {
+            opacity: 0.7;
+        }
+    </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
+
+    <!-- Success/Error Messages -->
+    <?php if ($success_message): ?>
+        <div class="success-message" id="successMessage">
+            <i class="fas fa-check-circle"></i>
+            <?php echo htmlspecialchars($success_message); ?>
+            <button class="close-btn" onclick="document.getElementById('successMessage').style.display='none';">&times;</button>
+        </div>
+        <script>
+            setTimeout(function() {
+                const message = document.getElementById('successMessage');
+                if (message) message.style.display = 'none';
+            }, 3000);
+        </script>
+    <?php endif; ?>
+    
+    <?php if ($error_message): ?>
+        <div class="error-message" id="errorMessage" style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <?php echo htmlspecialchars($error_message); ?>
+            <button class="close-btn" onclick="document.getElementById('errorMessage').style.display='none';" style="color: #721c24;">&times;</button>
+        </div>
+        <script>
+            setTimeout(function() {
+                const message = document.getElementById('errorMessage');
+                if (message) message.style.display = 'none';
+            }, 5000);
+        </script>
+    <?php endif; ?>
 
     <!-- Hero Section -->
     <section class="hero-section">
@@ -23,7 +160,7 @@ include 'config/database.php';
                         <h2>Khỏe Mạnh Mỗi Ngày</h2>
                         <p>Hàng nghìn sản phẩm chính hãng với giá tốt nhất. Giao hàng nhanh chóng toàn quốc.</p>
                         <?php if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']): ?>
-                            <a href="Login.php" class="cta-button">Đăng nhập ngay</a>
+                            <!-- <a href="Login.php" class="cta-button">Đăng nhập ngay</a> -->
                         <?php endif; ?>
                     </div>
                 </div>
@@ -84,14 +221,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="1">
-                            <input type="hidden" name="product_name" value="Paracetamol 500mg">
-                            <input type="hidden" name="product_price" value="25000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -110,14 +245,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="2">
-                            <input type="hidden" name="product_name" value="Vitamin C 1000mg">
-                            <input type="hidden" name="product_price" value="120000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -137,14 +270,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="3">
-                            <input type="hidden" name="product_name" value="Amoxicillin 250mg">
-                            <input type="hidden" name="product_price" value="45000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -162,14 +293,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="4">
-                            <input type="hidden" name="product_name" value="Omega-3 Fish Oil">
-                            <input type="hidden" name="product_price" value="180000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -188,14 +317,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="5">
-                            <input type="hidden" name="product_name" value="Calcium + D3">
-                            <input type="hidden" name="product_price" value="95000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -215,14 +342,12 @@ include 'config/database.php';
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="add_to_cart" value="1">
                             <input type="hidden" name="product_id" value="6">
-                            <input type="hidden" name="product_name" value="Glucosamine 1500mg">
-                            <input type="hidden" name="product_price" value="320000">
                             <button type="submit" class="add-to-cart">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart">
+                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -317,29 +442,29 @@ include 'config/database.php';
                 <div class="team-grid">
                     <div class="team-member">
                         <div class="member-avatar">A</div>
-                        <div class="member-name">Nguyễn Văn An</div>
-                        <div class="member-role">Team Leader - Backend Developer</div>
+                        <div class="member-name">Lê Hải Bằng</div>
+                        <!-- <div class="member-role">Team Leader - Backend Developer</div> -->
                         <div class="member-id">MSSV: 21010001</div>
                     </div>
                     
                     <div class="team-member">
                         <div class="member-avatar">B</div>
-                        <div class="member-name">Trần Thị Bình</div>
-                        <div class="member-role">Frontend Developer - UI/UX</div>
+                        <div class="member-name">Nguyễn Văn Phong</div>
+                        <!-- <div class="member-role">Frontend Developer - UI/UX</div> -->
                         <div class="member-id">MSSV: 21010002</div>
                     </div>
                     
                     <div class="team-member">
                         <div class="member-avatar">C</div>
-                        <div class="member-name">Lê Minh Cường</div>
-                        <div class="member-role">Database Administrator</div>
-                        <div class="member-id">MSSV: 21010003</div>
+                        <div class="member-name">Nguyễn Đăng Phúc Cường</div>
+                        <!-- <div class="member-role">Database Administrator</div> -->
+                        <div class="member-id">MSSV: 054205000736</div>
                     </div>
                     
                     <div class="team-member">
                         <div class="member-avatar">D</div>
-                        <div class="member-name">Phạm Thị Dung</div>
-                        <div class="member-role">Quality Assurance - Tester</div>
+                        <div class="member-name">Lý Khánh Đăng</div>
+                        <!-- <div class="member-role">Quality Assurance - Tester</div> -->
                         <div class="member-id">MSSV: 21010004</div>
                     </div>
                 </div>

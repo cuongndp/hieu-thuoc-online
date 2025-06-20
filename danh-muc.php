@@ -3,33 +3,68 @@ session_start();
 include 'config/database.php';
 include 'config/category_mapping.php';
 
-// Xử lý add to cart trước khi hiển thị gì cả
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+    $product_id = $_POST['product_id'] ?? 0;
+    $quantity = 1;
+    
+    // Kiểm tra đăng nhập
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
         header('Location: Login.php');
         exit;
     }
     
-    $product_id = $_POST['product_id'] ?? 0;
-    $product_name = $_POST['product_name'] ?? '';
-    $product_price = $_POST['product_price'] ?? 0;
+    $user_id = $_SESSION['user_id'] ?? 0;
     
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
-    
-    if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id]['quantity']++;
+if ($product_id > 0 && $user_id > 0) {
+        try {
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("ii", $user_id, $product_id);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Nếu đã có, tăng số lượng
+                $row = $result->fetch_assoc();
+                $new_quantity = $row['so_luong'] + $quantity;
+                
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+                
+                if ($update_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã cập nhật số lượng sản phẩm trong giỏ hàng!";
+                    error_log("Updated quantity for product $product_id");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi cập nhật sản phẩm!";
+                    error_log("Failed to update product $product_id");
+                }
+            } else {
+                // Nếu chưa có, thêm mới
+                $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("iii", $user_id, $product_id, $quantity);
+                
+                if ($insert_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã thêm sản phẩm vào giỏ hàng!";
+                    error_log("Added new product $product_id to cart");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi thêm sản phẩm!";
+                    error_log("Failed to insert product $product_id");
+                }
+            }
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Có lỗi xảy ra: " . $e->getMessage();
+            error_log("Exception in add to cart: " . $e->getMessage());
+        }
     } else {
-        $_SESSION['cart'][$product_id] = [
-            'name' => $product_name,
-            'price' => $product_price,
-            'quantity' => 1
-        ];
+        $_SESSION['error_message'] = "Thông tin không hợp lệ!";
+        error_log("Invalid data - User ID: $user_id, Product ID: $product_id");
     }
     
     // Redirect để tránh resubmit
-    header('Location: ' . $_SERVER['REQUEST_URI']);
+    header('Location: index.php');
     exit;
 }
 
@@ -388,7 +423,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
             </div>
             <?php endif; ?>
 
-            <!-- Pagination -->
+            <!-- Pagination
             <?php if (count($products) > 0): ?>
             <div class="pagination" id="pagination">
                 <a href="#" class="page-btn disabled" id="prev-btn">
@@ -403,7 +438,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
                     Sau <i class="fas fa-chevron-right"></i>
                 </a>
             </div>
-            <?php endif; ?>
+            <?php endif; ?> -->
         </div>
     </section>
 
@@ -435,30 +470,30 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
                 
                 <div class="team-grid">
                     <div class="team-member">
-                        <div class="member-avatar">A</div>
-                        <div class="member-name">Nguyễn Văn An</div>
-                        <div class="member-role">Team Leader - Backend Developer</div>
+                        <div class="member-avatar">B</div>
+                        <div class="member-name">Lê Hải Bằng</div>
+                        <!-- <div class="member-role">Team Leader - Backend Developer</div> -->
                         <div class="member-id">MSSV: 21010001</div>
                     </div>
                     
                     <div class="team-member">
-                        <div class="member-avatar">B</div>
-                        <div class="member-name">Trần Thị Bình</div>
-                        <div class="member-role">Frontend Developer - UI/UX</div>
+                        <div class="member-avatar">P</div>
+                        <div class="member-name">nguyễn Văn Phong</div>
+                        <!-- <div class="member-role">Frontend Developer - UI/UX</div> -->
                         <div class="member-id">MSSV: 21010002</div>
                     </div>
                     
                     <div class="team-member">
                         <div class="member-avatar">C</div>
-                        <div class="member-name">Lê Minh Cường</div>
-                        <div class="member-role">Database Administrator</div>
+                        <div class="member-name">Nguyễn Đăng Phúc Cường</div>
+                        <!-- <div class="member-role">Database Administrator</div> -->
                         <div class="member-id">MSSV: 21010003</div>
                     </div>
                     
                     <div class="team-member">
                         <div class="member-avatar">D</div>
-                        <div class="member-name">Phạm Thị Dung</div>
-                        <div class="member-role">Quality Assurance - Tester</div>
+                        <div class="member-name">Lý Khánh Đăng</div>
+                        <!-- <div class="member-role">Quality Assurance - Tester</div> -->
                         <div class="member-id">MSSV: 21010004</div>
                     </div>
                 </div>

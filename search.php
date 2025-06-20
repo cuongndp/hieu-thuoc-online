@@ -2,29 +2,65 @@
 session_start();
 include 'config/database.php';
 
-// Xử lý add to cart trước khi hiển thị
+// Xử lý add to cart - FIXED VERSION (giống trang danh mục)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
+    $product_id = $_POST['product_id'] ?? 0;
+    $quantity = 1;
+    
+    // Kiểm tra đăng nhập
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
         header('Location: Login.php');
         exit;
     }
     
-    $product_id = $_POST['product_id'] ?? 0;
-    $product_name = $_POST['product_name'] ?? '';
-    $product_price = $_POST['product_price'] ?? 0;
+    $user_id = $_SESSION['user_id'] ?? 0;
     
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
-    
-    if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id]['quantity']++;
+    if ($product_id > 0 && $user_id > 0) {
+        try {
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("ii", $user_id, $product_id);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Nếu đã có, tăng số lượng
+                $row = $result->fetch_assoc();
+                $new_quantity = $row['so_luong'] + $quantity;
+                
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+                
+                if ($update_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã cập nhật số lượng sản phẩm trong giỏ hàng!";
+                    error_log("Updated quantity for product $product_id");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi cập nhật sản phẩm!";
+                    error_log("Failed to update product $product_id");
+                }
+            } else {
+                // Nếu chưa có, thêm mới
+                $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("iii", $user_id, $product_id, $quantity);
+                
+                if ($insert_stmt->execute()) {
+                    $_SESSION['success_message'] = "Đã thêm sản phẩm vào giỏ hàng!";
+                    error_log("Added new product $product_id to cart");
+                } else {
+                    $_SESSION['error_message'] = "Lỗi khi thêm sản phẩm!";
+                    error_log("Failed to insert product $product_id");
+                }
+            }
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Có lỗi xảy ra: " . $e->getMessage();
+            error_log("Exception in add to cart: " . $e->getMessage());
+        }
     } else {
-        $_SESSION['cart'][$product_id] = [
-            'name' => $product_name,
-            'price' => $product_price,
-            'quantity' => 1
-        ];
+        $_SESSION['error_message'] = "Thông tin không hợp lệ!";
+        error_log("Invalid data - User ID: $user_id, Product ID: $product_id");
     }
     
     // Redirect để tránh resubmit
@@ -154,7 +190,7 @@ if (!empty($search_query)) {
     $count_stmt->execute();
     $count_result = $count_stmt->get_result();
     $count_row = $count_result->fetch_row();
-$total_products = $count_row ? $count_row[0] : 0;
+    $total_products = $count_row ? $count_row[0] : 0;
 }
 
 // Lấy danh sách danh mục cho filter
@@ -509,6 +545,26 @@ $total_pages = ceil($total_products / $per_page);
             color: white;
         }
 
+        /* Alert message styles */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            color: #3c763d;
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+
+        .alert-error {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+
         @media (max-width: 768px) {
             .search-results {
                 grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -548,6 +604,25 @@ $total_pages = ceil($total_products / $per_page);
     </div>
 
     <div class="search-container">
+        <!-- Success/Error Messages -->
+        <?php if (isset($_SESSION['success_message'])): ?>
+            <div class="alert alert-success">
+                <?php 
+                echo $_SESSION['success_message']; 
+                unset($_SESSION['success_message']);
+                ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error_message'])): ?>
+            <div class="alert alert-error">
+                <?php 
+                echo $_SESSION['error_message']; 
+                unset($_SESSION['error_message']);
+                ?>
+            </div>
+        <?php endif; ?>
+
         <?php if (!empty($search_query)): ?>
             <!-- Search Results Info -->
             <div class="search-results-info">
@@ -630,7 +705,7 @@ $total_pages = ceil($total_products / $per_page);
                             <div class="product-category"><?php echo htmlspecialchars($product['ten_danh_muc']); ?></div>
                             
                             <h3>
-                                <a href="product-detail.php?id=<?php echo $product['ma_san_pham']; ?>">
+                                <a href="chi-tiet-san-pham.php?id=<?php echo $product['ma_san_pham']; ?>">
                                     <?php echo htmlspecialchars($product['ten_san_pham']); ?>
                                 </a>
                             </h3>
@@ -752,18 +827,99 @@ $total_pages = ceil($total_products / $per_page);
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
+            <!-- Team Members Section -->
+            <div class="team-section">
+                <div class="section-title" style="margin: 0 0 40px 0;">
+                    <h2 style="color: #ecf0f1;">Thành Viên Nhóm</h2>
+                    <p style="color: #bdc3c7;">Đội ngũ phát triển website VitaMeds</p>
+                </div>
+                
+                <div class="team-grid">
+                    <div class="team-member">
+                        <div class="member-avatar">B</div>
+                        <div class="member-name">Lê Hải Bằng</div>
+                        <div class="member-id">MSSV: 21010001</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">P</div>
+                        <div class="member-name">nguyễn Văn Phong</div>
+                        <div class="member-id">MSSV: 21010002</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">C</div>
+                        <div class="member-name">Nguyễn Đăng Phúc Cường</div>
+                        <div class="member-id">MSSV: 21010003</div>
+                    </div>
+                    
+                    <div class="team-member">
+                        <div class="member-avatar">D</div>
+                        <div class="member-name">Lý Khánh Đăng</div>
+                        <div class="member-id">MSSV: 21010004</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="footer-content">
                 <div class="footer-section">
                     <h3>VitaMeds</h3>
-                    <p>Hiệu thuốc trực tuyến uy tín</p>
+                    <p>Đồ án môn học: Lập trình Web<br>
+                    Trường: Đại học Giao thông vận tải</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-youtube"></i></a>
+                        <a href="#"><i class="fas fa-envelope"></i></a>
+                    </div>
                 </div>
+                
                 <div class="footer-section">
-                    <h3>Liên hệ</h3>
-                    <p><i class="fas fa-phone"></i> 1900-1234</p>
-                    <p><i class="fas fa-envelope"></i> info@vitameds.com</p>
+                    <h3>Thông Tin Dự Án</h3>
+                    <ul>
+                        <li><a href="#">Mô tả dự án</a></li>
+                        <li><a href="#">Tài liệu kỹ thuật</a></li>
+                        <li><a href="#">Database Schema</a></li>
+                        <li><a href="#">API Documentation</a></li>
+                        <li><a href="#">Source Code</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Công Nghệ Sử Dụng</h3>
+                    <ul>
+                        <li>Frontend: HTML5, CSS3, JavaScript</li>
+                        <li>Backend: PHP, MySQL</li>
+                        <li>Framework: Bootstrap</li>
+                        <li>Tools: VSCode, phpMyAdmin</li>
+                        <li>Version Control: Git, GitHub</li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Liên Hệ Nhóm</h3>
+                    <p><i class="fas fa-envelope"></i> vitameds.team@student.uit.edu.vn</p>
+                    <p><i class="fas fa-phone"></i> (+84) 123-456-789</p>
+                    <p><i class="fas fa-map-marker-alt"></i> Đại học Giao thông vận tải</p>
                 </div>
             </div>
         </div>
     </footer>
+
+    <script>
+        // JavaScript cho UI interaction
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-hide alert messages sau 5 giây
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 300);
+                }, 5000);
+            });
+        });
+    </script>
 </body>
 </html>

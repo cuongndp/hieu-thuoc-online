@@ -1,0 +1,123 @@
+
+/* User Menu Styles */
+.user-menu {
+    position: relative;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: #ecf0f1;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.user-info:hover {
+    background: #d5dbdb;
+}
+
+.user-info.active {
+    background: #d5dbdb;
+}
+
+.user-info i.fa-user-circle {
+    font-size: 20px;
+    color: #2c3e50;
+}
+
+.user-info span {
+    color: #2c3e50;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-info i.fa-chevron-down {
+    font-size: 12px;
+    color: #7f8c8d;
+    transition: transform 0.3s ease;
+}
+
+.user-info.active i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    min-width: 200px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e0e6ed;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.user-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #2c3e50;
+    text-decoration: none;
+    transition: background 0.3s ease;
+}
+
+.user-dropdown a:hover {
+    background: #f8f9fa;
+}
+
+.user-dropdown a i {
+    width: 16px;
+    color: #7f8c8d;
+}
+
+.user-dropdown hr {
+    margin: 5px 0;
+    border: none;
+    border-top: 1px solid #e0e6ed;
+}
+
+.logout-link {
+    color: #e74c3c !important;
+}
+
+.logout-link:hover {
+    background: #fdf2f2 !important;
+}
+
+.logout-link i {
+    color: #e74c3c !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .user-info span {
+        display: none;
+    }
+    
+    .user-dropdown {
+        right: -10px;
+        min-width: 180px;
+    }
+}

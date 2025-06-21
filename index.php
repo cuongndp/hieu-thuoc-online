@@ -89,35 +89,8 @@ if ($error_message) {
     <title>VitaMeds - Hiệu Thuốc Trực Tuyến Uy Tín</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/index.css">
-    <style>
-        .success-message, .error-message {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px auto;
-            max-width: 500px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .success-message .close-btn, .error-message .close-btn {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
-            color: #155724;
-        }
-        
-        .success-message .close-btn:hover, .error-message .close-btn:hover {
-            opacity: 0.7;
-        }
-    </style>
+    <link rel="stylesheet" href="css/header.css">
+    
 </head>
 <body>
     <?php include 'includes/header.php'; ?>

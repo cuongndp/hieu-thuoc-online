@@ -174,6 +174,7 @@ $show_register = isset($show_register) ? (bool)$show_register : false;
     <title>Đăng Nhập & Đăng Ký - VitaMeds</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/Login.css">
+    <link rel="stylesheet" href="css/header.css">
 </head>
 <body>
     <div class="auth-container">

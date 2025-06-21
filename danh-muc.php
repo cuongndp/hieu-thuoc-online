@@ -175,6 +175,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
     <title><?php echo htmlspecialchars($category_info['ten_danh_muc']); ?> - VitaMeds</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./css/danh-muc.css">
+    <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body>

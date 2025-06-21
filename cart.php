@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     exit;
 }
 
-// Xử lý các action từ form
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Xử lý các action từ form giỏ hàng
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'] ?? '';
     
     switch ($action) {
@@ -83,9 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'checkout':
             header('Location: thanh-toan.php');
-    exit;
-    break;
-            
+            exit;
+            break;
     }
     
     // Redirect để tránh resubmit
@@ -118,22 +117,48 @@ $product_info = [
 
 $cart = [];
 
-// Lấy danh sách sản phẩm trong giỏ hàng
+// Lấy danh sách sản phẩm trong giỏ hàng với thông tin chi tiết từ database
 while ($row = $cart_result->fetch_assoc()) {
     $product_id = $row['ma_san_pham'];
     $quantity = $row['so_luong'];
     
     echo "<!-- Debug: Sản phẩm ID = " . $product_id . ", Số lượng = " . $quantity . " -->";
     
-    // Lấy thông tin sản phẩm
-    $product_name = isset($product_info[$product_id]) ? $product_info[$product_id]['name'] : "Sản phẩm " . $product_id;
-    $product_price = isset($product_info[$product_id]) ? $product_info[$product_id]['price'] : 100000;
+    // Lấy thông tin chi tiết sản phẩm từ database
+    $product_detail_sql = "
+        SELECT 
+            sp.ten_san_pham,
+            sp.gia_ban,
+            sp.gia_khuyen_mai,
+            ha.duong_dan_hinh_anh
+        FROM san_pham_thuoc sp
+        LEFT JOIN hinh_anh_san_pham ha ON sp.ma_san_pham = ha.ma_san_pham AND ha.la_hinh_chinh = TRUE
+        WHERE sp.ma_san_pham = ?
+    ";
+    
+    $product_detail_stmt = $conn->prepare($product_detail_sql);
+    $product_detail_stmt->bind_param("i", $product_id);
+    $product_detail_stmt->execute();
+    $product_detail_result = $product_detail_stmt->get_result();
+    $product_detail = $product_detail_result->fetch_assoc();
+    
+    if ($product_detail) {
+        // Sử dụng dữ liệu thực từ database
+        $product_name = $product_detail['ten_san_pham'];
+        $product_price = $product_detail['gia_khuyen_mai'] ?: $product_detail['gia_ban'];
+        $product_image = $product_detail['duong_dan_hinh_anh'] ?: "https://via.placeholder.com/60x60?text=" . urlencode($product_name);
+    } else {
+        // Fallback về dữ liệu mẫu nếu không tìm thấy trong database
+        $product_name = isset($product_info[$product_id]) ? $product_info[$product_id]['name'] : "Sản phẩm " . $product_id;
+        $product_price = isset($product_info[$product_id]) ? $product_info[$product_id]['price'] : 100000;
+        $product_image = "https://via.placeholder.com/60x60?text=" . urlencode($product_name);
+    }
     
     $cart[$product_id] = [
         'name' => $product_name,
         'price' => $product_price,
         'quantity' => $quantity,
-        'image' => "https://via.placeholder.com/60x60?text=" . urlencode($product_name)
+        'image' => $product_image
     ];
     
     echo "<!-- Debug: Đã thêm vào cart - " . $product_name . " x " . $quantity . " -->";

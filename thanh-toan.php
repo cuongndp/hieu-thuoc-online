@@ -649,7 +649,7 @@ function getImageUrl($image_path, $product_name = 'Product') {
             <a href="index.php" class="btn-primary">
                 <i class="fas fa-home"></i> Về trang chủ
             </a>
-            <a href="orders.php" class="btn-primary" style="background: #27ae60;">
+            <a href="don-hang.php" class="btn-primary" style="background: #27ae60;">
                 <i class="fas fa-list"></i> Xem đơn hàng
             </a>
         </div>

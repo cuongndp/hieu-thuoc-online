@@ -16,7 +16,7 @@ if (!$product_id) {
 // Xử lý add to cart
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-        header('Location: Login.php');
+        header('Location: login.php');
         exit;
     }
     
@@ -349,7 +349,7 @@ if ($product['han_su_dung']) {
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ hàng
                             </button>
                         <?php else: ?>
-                            <a href="Login.php" class="add-to-cart-btn" style="text-decoration: none;">
+                            <a href="login.php" class="add-to-cart-btn" style="text-decoration: none;">
                                 <i class="fas fa-sign-in-alt"></i> Đăng nhập để mua hàng
                             </a>
                         <?php endif; ?>

@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     
     // Kiểm tra đăng nhập
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-        header('Location: Login.php');
+        header('Location: login.php');
         exit;
     }
     
@@ -374,7 +374,7 @@ $total_pages = ceil($total_products / $per_page);
                                         </button>
                                     </form>
                                 <?php else: ?>
-                                    <a href="Login.php" class="add-to-cart">
+                                    <a href="login.php" class="add-to-cart">
                                         <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                                     </a>
                                 <?php endif; ?>

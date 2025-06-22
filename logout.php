@@ -12,6 +12,6 @@ session_unset();
 session_destroy();
 
 // Chuyển về trang đăng nhập với thông báo đăng xuất thành công
-header('Location: Login.php?message=logout_success');
+header('Location: login.php?message=logout_success');
 exit();
 ?>

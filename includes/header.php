@@ -14,7 +14,7 @@ $user_id = $_SESSION['user_id'] ?? 0;
 // Xử lý add to cart - LƯU VÀO DATABASE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     if (!$is_logged_in) {
-        header('Location: Login.php');
+        header('Location: login.php');
         exit;
     }
     

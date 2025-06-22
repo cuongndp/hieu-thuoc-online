@@ -173,7 +173,7 @@ $show_register = isset($show_register) ? (bool)$show_register : false;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng Nhập & Đăng Ký - VitaMeds</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/Login.css">
+    <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/header.css">
 </head>
 <body>

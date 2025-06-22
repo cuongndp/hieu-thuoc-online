@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     
     // Kiểm tra đăng nhập
     if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-        header('Location: Login.php');
+        header('Location: login.php');
         exit;
     }
     
@@ -133,7 +133,7 @@ if ($error_message) {
                         <h2>Khỏe Mạnh Mỗi Ngày</h2>
                         <p>Hàng nghìn sản phẩm chính hãng với giá tốt nhất. Giao hàng nhanh chóng toàn quốc.</p>
                         <?php if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']): ?>
-                            <!-- <a href="Login.php" class="cta-button">Đăng nhập ngay</a> -->
+                            <!-- <a href="login.php" class="cta-button">Đăng nhập ngay</a> -->
                         <?php endif; ?>
                     </div>
                 </div>
@@ -199,7 +199,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -223,7 +223,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -248,7 +248,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -271,7 +271,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -295,7 +295,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>
@@ -320,7 +320,7 @@ if ($error_message) {
                             </button>
                         </form>
                     <?php else: ?>
-                        <a href="Login.php" class="add-to-cart" style="text-decoration: none;">
+                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
                             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
                         </a>
                     <?php endif; ?>

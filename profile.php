@@ -4,7 +4,7 @@ include 'config/database.php';
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-    header('Location: Login.php');
+    header('Location: login.php');
     exit;
 }
 

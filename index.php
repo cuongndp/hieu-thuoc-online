@@ -80,6 +80,83 @@ if ($success_message) {
 if ($error_message) {
     unset($_SESSION['error_message']);
 }
+
+// LẤY SẢN PHẨM NỔI BẬT TỪ CSDL
+$featured_sql = "
+    SELECT 
+        sp.ma_san_pham,
+        sp.ten_san_pham,
+        sp.gia_ban,
+        sp.gia_khuyen_mai,
+        sp.mo_ta,
+        sp.can_don_thuoc,
+        sp.san_pham_noi_bat,
+        nsx.ten_nha_san_xuat,
+        ha.duong_dan_hinh_anh
+    FROM san_pham_thuoc sp
+    LEFT JOIN nha_san_xuat nsx ON sp.ma_nha_san_xuat = nsx.ma_nha_san_xuat
+    LEFT JOIN hinh_anh_san_pham ha ON sp.ma_san_pham = ha.ma_san_pham AND ha.la_hinh_chinh = TRUE
+    WHERE sp.san_pham_noi_bat = 1 AND sp.trang_thai_hoat_dong = 1
+    ORDER BY sp.ngay_tao DESC
+    LIMIT 6
+";
+$featured_result = $conn->query($featured_sql);
+$featured_products = [];
+while ($row = $featured_result->fetch_assoc()) {
+    $featured_products[] = $row;
+}
+
+// LẤY QUẢNG CÁO ĐỘNG TỪ CSDL - chỉ lấy 3 quảng cáo mới nhất cho banner động
+$ads_sql = "SELECT * FROM quang_cao WHERE trang_thai = 1 ORDER BY ngay_tao DESC LIMIT 3";
+$ads_result = $conn->query($ads_sql);
+$ads = [];
+while ($row = $ads_result->fetch_assoc()) {
+    $ads[] = $row;
+}
+
+// LẤY 3 QUẢNG CÁO GRID DƯỚI SLIDER (không trùng với 3 quảng cáo banner động)
+$grid_ads = [];
+if (!empty($ads)) {
+    // Lấy tiếp 3 quảng cáo khác (bắt đầu từ quảng cáo thứ 4 trở đi)
+    $grid_sql = "SELECT * FROM quang_cao WHERE trang_thai = 1 ORDER BY ngay_tao DESC LIMIT 3 OFFSET 3";
+    $grid_result = $conn->query($grid_sql);
+    while ($row = $grid_result->fetch_assoc()) {
+        $grid_ads[] = $row;
+    }
+}
+
+// LẤY MINI ADS TỪ CSDL (bỏ qua ads đầu tiên)
+$mini_ads = array_slice($ads, 1, 3);
+
+// LẤY QUẢNG CÁO NỔI BẬT DƯỚI SLIDER (ads thứ 2 nếu có)
+$below_slider_ad = isset($ads[1]) ? $ads[1] : null;
+
+// LẤY THỜI GIAN GIẢM GIÁ SỐC TỪ BẢNG GIAM_GIA_SOC
+$flash_time = $conn->query("SELECT * FROM giam_gia_soc WHERE thoi_gian_bat_dau <= NOW() AND thoi_gian_ket_thuc >= NOW() ORDER BY id DESC LIMIT 1")->fetch_assoc();
+$in_flash_sale = false;
+$phan_tram_giam_flash = 0;
+if ($flash_time) {
+    $in_flash_sale = true;
+    $phan_tram_giam_flash = (int)$flash_time['phan_tram_giam'];
+}
+
+// LẤY SẢN PHẨM GIẢM GIÁ SỐC (chỉ khi đang trong thời gian giảm giá sốc)
+$flash_sale_products = [];
+if ($in_flash_sale) {
+    $sql_flash_sale = "
+        SELECT sp.*, ha.duong_dan_hinh_anh
+        FROM san_pham_thuoc sp
+        LEFT JOIN hinh_anh_san_pham ha ON sp.ma_san_pham = ha.ma_san_pham AND ha.la_hinh_chinh = 1
+        WHERE sp.is_flash_sale = 1
+          AND sp.trang_thai_hoat_dong = 1
+        ORDER BY sp.ngay_tao DESC
+        LIMIT 6
+    ";
+    $result_flash_sale = $conn->query($sql_flash_sale);
+    while ($row = $result_flash_sale->fetch_assoc()) {
+        $flash_sale_products[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -95,38 +172,63 @@ if ($error_message) {
 <body>
     <?php include 'includes/header.php'; ?>
 
-    <!-- Success/Error Messages -->
-    <?php if ($success_message): ?>
-        <div class="success-message" id="successMessage">
-            <i class="fas fa-check-circle"></i>
-            <?php echo htmlspecialchars($success_message); ?>
-            <button class="close-btn" onclick="document.getElementById('successMessage').style.display='none';">&times;</button>
-        </div>
-        <script>
-            setTimeout(function() {
-                const message = document.getElementById('successMessage');
-                if (message) message.style.display = 'none';
-            }, 3000);
-        </script>
-    <?php endif; ?>
-    
-    <?php if ($error_message): ?>
-        <div class="error-message" id="errorMessage" style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;">
-            <i class="fas fa-exclamation-triangle"></i>
-            <?php echo htmlspecialchars($error_message); ?>
-            <button class="close-btn" onclick="document.getElementById('errorMessage').style.display='none';" style="color: #721c24;">&times;</button>
-        </div>
-        <script>
-            setTimeout(function() {
-                const message = document.getElementById('errorMessage');
-                if (message) message.style.display = 'none';
-            }, 5000);
-        </script>
-    <?php endif; ?>
-
-    <!-- Hero Section -->
+    <!-- Hero Section (Banner động) -->
     <section class="hero-section">
         <div class="container">
+            <?php if (!empty($ads)): ?>
+            <div class="ads-slider" id="adsSlider">
+                <?php foreach ($ads as $i => $ad): ?>
+                <div class="ads-slide<?php if ($i === 0) echo ' active'; ?>">
+                    <div class="ads-img">
+                        <img src="<?php echo htmlspecialchars($ad['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($ad['tieu_de']); ?>">
+                    </div>
+                    <div class="ads-content">
+                        <h2><?php echo htmlspecialchars($ad['tieu_de']); ?></h2>
+                        <p><?php echo htmlspecialchars($ad['mo_ta']); ?></p>
+                        <?php if (!empty($ad['link'])): ?>
+                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" class="ads-btn" target="_blank">Xem chi tiết</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                <button class="ads-prev" onclick="plusAdsSlide(-1)">&#10094;</button>
+                <button class="ads-next" onclick="plusAdsSlide(1)">&#10095;</button>
+            </div>
+            <script>
+            let adsSlideIndex = 0;
+            showAdsSlide(adsSlideIndex);
+            function plusAdsSlide(n) { showAdsSlide(adsSlideIndex += n); }
+            function showAdsSlide(n) {
+                let slides = document.querySelectorAll('#adsSlider .ads-slide');
+                if (n >= slides.length) adsSlideIndex = 0;
+                if (n < 0) adsSlideIndex = slides.length - 1;
+                slides.forEach((slide, i) => {
+                    slide.style.display = (i === adsSlideIndex) ? 'block' : 'none';
+                });
+            }
+            // Auto slide
+            setInterval(() => { plusAdsSlide(1); }, 5000);
+            </script>
+            <style>
+            .ads-slider { position: relative; overflow: hidden; border-radius: 18px; margin-bottom: 40px; }
+            .ads-slide { display: none; position: relative; background: #fff; }
+            .ads-slide.active, .ads-slide:first-child { display: block; }
+            .ads-img img { width: 100%; height: 320px; object-fit: cover; border-radius: 18px 18px 0 0; }
+            .ads-content { position: absolute; left: 40px; top: 40px; background: rgba(0,0,0,0.45); color: #fff; padding: 30px 40px; border-radius: 12px; max-width: 50%; }
+            .ads-content h2 { font-size: 2.2rem; margin-bottom: 10px; }
+            .ads-content p { font-size: 1.1rem; margin-bottom: 18px; }
+            .ads-btn { background: #ff6b6b; color: #fff; padding: 12px 28px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: background 0.2s; }
+            .ads-btn:hover { background: #e74c3c; }
+            .ads-prev, .ads-next { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.3); color: #fff; border: none; font-size: 2rem; padding: 8px 16px; border-radius: 50%; cursor: pointer; z-index: 2; }
+            .ads-prev { left: 10px; }
+            .ads-next { right: 10px; }
+            @media (max-width: 768px) {
+                .ads-content { position: static; max-width: 100%; padding: 15px; border-radius: 0 0 12px 12px; }
+                .ads-img img { height: 180px; }
+            }
+            </style>
+            <?php else: ?>
+            <!-- Nếu không có quảng cáo thì giữ banner cũ -->
             <div class="banner-slider">
                 <div class="main-banner">
                     <div class="banner-content">
@@ -137,13 +239,13 @@ if ($error_message) {
                         <?php endif; ?>
                     </div>
                 </div>
-                
                 <div class="side-banner">
                     <h3>Giảm giá lớn</h3>
                     <div class="discount">30%</div>
                     <p>Cho đơn hàng đầu tiên</p>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Trust Badges -->
             <div class="trust-badges">
@@ -171,6 +273,326 @@ if ($error_message) {
         </div>
     </section>
 
+<!-- Quảng cáo grid nổi bật dưới slider -->
+<?php if (!empty($grid_ads)): ?>
+<section class="below-slider-ads-grid-section">
+    <div class="container">
+        <div class="below-slider-ads-grid">
+            <?php if (count($grid_ads) === 3): ?>
+                <div class="below-slider-ads-main ads-fade-in">
+                    <div class="below-slider-ads-img-wrap">
+                        <img src="<?php echo htmlspecialchars($grid_ads[0]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?>">
+                    </div>
+                    <div class="below-slider-ads-content">
+                        <h2><?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?></h2>
+                        <p><?php echo htmlspecialchars($grid_ads[0]['mo_ta']); ?></p>
+                    </div>
+                </div>
+                <div class="below-slider-ads-side">
+                    <div class="below-slider-ads-side-item ads-fade-in">
+                        <div class="below-slider-ads-img-wrap">
+                            <img src="<?php echo htmlspecialchars($grid_ads[1]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[1]['tieu_de']); ?>">
+                        </div>
+                        <div class="below-slider-ads-side-content">
+                            <h3><?php echo htmlspecialchars($grid_ads[1]['tieu_de']); ?></h3>
+                            <p><?php echo htmlspecialchars($grid_ads[1]['mo_ta']); ?></p>
+                        </div>
+                    </div>
+                    <div class="below-slider-ads-side-item ads-fade-in">
+                        <div class="below-slider-ads-img-wrap">
+                            <img src="<?php echo htmlspecialchars($grid_ads[2]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[2]['tieu_de']); ?>">
+                        </div>
+                        <div class="below-slider-ads-side-content">
+                            <h3><?php echo htmlspecialchars($grid_ads[2]['tieu_de']); ?></h3>
+                            <p><?php echo htmlspecialchars($grid_ads[2]['mo_ta']); ?></p>
+                        </div>
+                    </div>
+                </div>
+            <?php elseif (count($grid_ads) === 2): ?>
+                <div class="below-slider-ads-main ads-fade-in">
+                    <div class="below-slider-ads-img-wrap">
+                        <img src="<?php echo htmlspecialchars($grid_ads[0]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?>">
+                    </div>
+                    <div class="below-slider-ads-content">
+                        <h2><?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?></h2>
+                        <p><?php echo htmlspecialchars($grid_ads[0]['mo_ta']); ?></p>
+                    </div>
+                </div>
+                <div class="below-slider-ads-side">
+                    <div class="below-slider-ads-side-item ads-fade-in">
+                        <div class="below-slider-ads-img-wrap">
+                            <img src="<?php echo htmlspecialchars($grid_ads[1]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[1]['tieu_de']); ?>">
+                        </div>
+                        <div class="below-slider-ads-side-content">
+                            <h3><?php echo htmlspecialchars($grid_ads[1]['tieu_de']); ?></h3>
+                            <p><?php echo htmlspecialchars($grid_ads[1]['mo_ta']); ?></p>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="below-slider-ads-main ads-fade-in" style="width:100%">
+                    <div class="below-slider-ads-img-wrap">
+                        <img src="<?php echo htmlspecialchars($grid_ads[0]['hinh_anh']); ?>" alt="<?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?>">
+                    </div>
+                    <div class="below-slider-ads-content">
+                        <h2><?php echo htmlspecialchars($grid_ads[0]['tieu_de']); ?></h2>
+                        <p><?php echo htmlspecialchars($grid_ads[0]['mo_ta']); ?></p>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<style>
+.below-slider-ads-grid-section { margin: 30px 0 10px 0; }
+.below-slider-ads-grid { display: flex; gap: 24px; }
+.below-slider-ads-main { flex: 2; background: #fff; border-radius: 18px; box-shadow: 0 2px 16px rgba(33,150,243,0.10); overflow: hidden; position: relative; display: flex; flex-direction: column; transition: box-shadow 0.3s, transform 0.3s; }
+.below-slider-ads-main:hover { box-shadow: 0 8px 32px rgba(33,150,243,0.18); transform: translateY(-4px) scale(1.03); z-index: 2; }
+.below-slider-ads-img-wrap { overflow: hidden; border-radius: 18px 18px 0 0; }
+.below-slider-ads-main img { width: 100%; height: 220px; object-fit: cover; border-radius: 18px 18px 0 0; transition: transform 0.4s cubic-bezier(.4,2,.6,1); }
+.below-slider-ads-main:hover img { transform: scale(1.08) rotate(-1deg); }
+.below-slider-ads-content { padding: 22px 28px; }
+.below-slider-ads-content h2 { font-size: 1.5rem; color: #1976d2; margin-bottom: 8px; font-weight: bold; }
+.below-slider-ads-content p { font-size: 1.05rem; color: #333; margin-bottom: 12px; }
+.below-slider-ads-btn { background: #ff6b6b; color: #fff; padding: 8px 22px; border-radius: 22px; text-decoration: none; font-weight: 500; font-size: 1rem; transition: background 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(255,107,107,0.10); }
+.below-slider-ads-btn:hover { background: #e74c3c; box-shadow: 0 4px 16px rgba(255,107,107,0.18); }
+.below-slider-ads-side { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+.below-slider-ads-side-item { background: #fff; border-radius: 18px; box-shadow: 0 2px 16px rgba(33,150,243,0.10); overflow: hidden; display: flex; flex-direction: column; transition: box-shadow 0.3s, transform 0.3s; }
+.below-slider-ads-side-item:hover { box-shadow: 0 8px 32px rgba(33,150,243,0.18); transform: translateY(-2px) scale(1.04); z-index: 2; }
+.below-slider-ads-side-item .below-slider-ads-img-wrap { border-radius: 18px 18px 0 0; }
+.below-slider-ads-side-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 18px 18px 0 0; transition: transform 0.4s cubic-bezier(.4,2,.6,1); }
+.below-slider-ads-side-item:hover img { transform: scale(1.08) rotate(1deg); }
+.below-slider-ads-side-content { padding: 14px 18px; }
+.below-slider-ads-side-content h3 { font-size: 1.08rem; color: #1976d2; margin-bottom: 6px; font-weight: bold; }
+.below-slider-ads-side-content p { font-size: 0.98rem; color: #333; margin-bottom: 8px; }
+/* Fade-in animation */
+.ads-fade-in { opacity: 0; animation: adsFadeIn 1.1s ease forwards; }
+.ads-fade-in:nth-child(1) { animation-delay: 0.1s; }
+.ads-fade-in:nth-child(2) { animation-delay: 0.3s; }
+.ads-fade-in:nth-child(3) { animation-delay: 0.5s; }
+@keyframes adsFadeIn { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 1100px) { .below-slider-ads-grid { flex-direction: column; } .below-slider-ads-main, .below-slider-ads-side { width: 100%; } }
+@media (max-width: 700px) { .below-slider-ads-main img { height: 140px; } .below-slider-ads-side-item img { height: 70px; } .below-slider-ads-content, .below-slider-ads-side-content { padding: 10px 6px; } }
+</style>
+<?php endif; ?>
+
+
+    <?php if ($in_flash_sale && !empty($flash_sale_products)): ?>
+    <section class="flash-sale-section">
+        <div class="container">
+            <div class="flash-sale-title">
+                <span class="flash-icon">⚡</span> SẢN PHẨM GIẢM GIÁ SỐC
+                <span class="flash-sale-badge-global">-<?php echo $phan_tram_giam_flash; ?>%</span>
+            </div>
+            <div class="flash-sale-products-grid">
+                <?php foreach ($flash_sale_products as $product): 
+                    $gia_goc = $product['gia_ban'];
+                    $gia_sau_giam = $gia_goc * (1 - $phan_tram_giam_flash / 100);
+                    $img_src = !empty($product['duong_dan_hinh_anh']) ? htmlspecialchars($product['duong_dan_hinh_anh']) : 'https://via.placeholder.com/160x160/fffbe7/cccccc?text=No+Image';
+                ?>
+                <div class="flash-sale-product-card">
+                    <div class="flash-sale-product-img">
+                        <img src="<?php echo $img_src; ?>" alt="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                    </div>
+                    <div class="flash-sale-product-info">
+                        <h3><?php echo htmlspecialchars($product['ten_san_pham']); ?></h3>
+                        <div class="flash-sale-product-price">
+                            <span class="flash-sale-current-price"><?php echo number_format($gia_sau_giam, 0, ',', '.'); ?>đ</span>
+                            <span class="flash-sale-old-price"><?php echo number_format($gia_goc, 0, ',', '.'); ?>đ</span>
+                        </div>
+                        <div class="flash-sale-actions">
+                            <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="add_to_cart" value="1">
+                                    <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
+                                    <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                                    <input type="hidden" name="product_price" value="<?php echo $gia_sau_giam; ?>">
+                                    <button type="submit" class="flash-sale-add-to-cart">
+                                        <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <a href="login.php" class="flash-sale-add-to-cart" style="text-decoration: none;">
+                                    <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                </a>
+                            <?php endif; ?>
+                            <a href="chi-tiet-san-pham.php?id=<?php echo $product['ma_san_pham']; ?>" class="flash-sale-view-detail" title="Xem chi tiết sản phẩm">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <style>
+    .flash-sale-section {
+        margin: 40px 0 32px 0;
+        background: linear-gradient(90deg, #fffbe7 0%, #ffe0b2 100%);
+        border-radius: 18px;
+        box-shadow: 0 4px 32px rgba(255,152,0,0.18);
+        padding: 32px 0;
+        border: 3px solid #ff9800;
+        position: relative;
+    }
+    .flash-sale-title {
+        font-size: 2.2rem;
+        font-weight: bold;
+        color: #e53935;
+        text-align: center;
+        margin-bottom: 24px;
+        letter-spacing: 1px;
+        position: relative;
+        text-shadow: 0 2px 8px #fffbe7, 0 1px 0 #fff;
+    }
+    .flash-icon {
+        font-size: 2.4rem;
+        vertical-align: middle;
+        margin-right: 8px;
+        color: #ff9800;
+        filter: drop-shadow(0 2px 6px #fffbe7);
+    }
+    .flash-sale-badge-global {
+        display: inline-block;
+        background: #e53935;
+        color: #fff;
+        font-weight: bold;
+        border-radius: 10px;
+        padding: 8px 22px;
+        font-size: 1.3rem;
+        margin-left: 18px;
+        box-shadow: 0 2px 12px rgba(229,57,53,0.18);
+        letter-spacing: 1px;
+        vertical-align: middle;
+        border: 2px solid #fffbe7;
+    }
+    .flash-sale-products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 32px;
+        justify-content: center;
+    }
+    .flash-sale-product-card {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(255,152,0,0.18);
+        padding: 22px 18px 18px 18px;
+        position: relative;
+        border: 2.5px solid #ff9800;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: box-shadow 0.2s, transform 0.2s, border 0.2s;
+        min-height: 370px;
+        overflow: hidden;
+    }
+    .flash-sale-product-card:hover {
+        box-shadow: 0 12px 36px rgba(255,152,0,0.28);
+        transform: translateY(-6px) scale(1.04);
+        z-index: 2;
+        border: 2.5px solid #e53935;
+    }
+    .flash-sale-product-img {
+        width: 160px;
+        height: 160px;
+        background: #fffbe7;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    }
+    .flash-sale-product-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 12px;
+        background: #fffbe7;
+    }
+    .flash-sale-product-info {
+        text-align: center;
+        margin-top: 6px;
+        width: 100%;
+    }
+    .flash-sale-product-info h3 {
+        font-size: 1.18rem;
+        color: #222;
+        font-weight: bold;
+        margin-bottom: 8px;
+        min-height: 48px;
+    }
+    .flash-sale-product-price {
+        margin: 8px 0 18px 0;
+    }
+    .flash-sale-current-price {
+        color: #e53935;
+        font-weight: bold;
+        font-size: 1.35rem;
+        letter-spacing: 1px;
+    }
+    .flash-sale-old-price {
+        color: #888;
+        text-decoration: line-through;
+        margin-left: 10px;
+        font-size: 1.08rem;
+    }
+    .flash-sale-actions {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+    }
+    .flash-sale-add-to-cart {
+        background: linear-gradient(90deg, #ff9800 0%, #e53935 100%);
+        color: #fff;
+        border: none;
+        border-radius: 24px;
+        padding: 10px 28px;
+        font-size: 1.08rem;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 12px rgba(255,152,0,0.13);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+    .flash-sale-add-to-cart:hover {
+        background: linear-gradient(90deg, #e53935 0%, #ff9800 100%);
+        box-shadow: 0 4px 18px rgba(255,152,0,0.22);
+        transform: scale(1.04);
+    }
+    .flash-sale-view-detail {
+        background: #fffbe7;
+        color: #e53935;
+        border-radius: 50%;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        box-shadow: 0 2px 8px rgba(255,152,0,0.10);
+        transition: background 0.2s, color 0.2s, transform 0.2s;
+        margin-left: 0;
+        text-decoration: none;
+    }
+    .flash-sale-view-detail:hover {
+        background: #e53935;
+        color: #fff;
+        transform: scale(1.12);
+    }
+    @media (max-width: 900px) {
+        .flash-sale-products-grid { grid-template-columns: 1fr; gap: 18px; }
+        .flash-sale-product-card { min-height: 0; }
+    }
+    </style>
+    <?php endif; ?>
+
     <!-- Featured Products -->
     <section class="featured-products">
         <div class="container">
@@ -180,154 +602,67 @@ if ($error_message) {
             </div>
             
             <div class="products-grid">
-                <div class="product-card">
-                    <div class="product-badge">-15%</div>
-                    <div class="product-image">
-                        <img src="./images/OIP.jpg" alt="Paracetamol 500mg">
+                <?php if (empty($featured_products)): ?>
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px;">
+                        <h3>Không có sản phẩm nổi bật</h3>
+                        <p>Hiện tại chưa có sản phẩm nổi bật nào.</p>
                     </div>
-                    <h3>Paracetamol 500mg</h3>
-                    <div class="product-price">
-                        <span class="current-price">25.000đ</span>
-                        <span class="old-price">30.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="1">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-badge">Hot</div>
-                    <div class="product-image">
-                        <img src="./images/download.jpg" alt="Vitamin C 1000mg">
-                    </div>
-                    <h3>Vitamin C 1000mg</h3>
-                    <div class="product-price">
-                        <span class="current-price">120.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="2">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-badge">-20%</div>
-                    <div class="product-image">
-                        <img src="./images/OIP (1).jpg" alt="Amoxicillin 250mg">
-                    </div>
-                    <h3>Amoxicillin 250mg</h3>
-                    <div class="product-price">
-                        <span class="current-price">45.000đ</span>
-                        <span class="old-price">56.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="3">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-image">
-                        <img src="./images/OIP (2).jpg" alt="Omega-3 Fish Oil">
-                    </div>
-                    <h3>Omega-3 Fish Oil</h3>
-                    <div class="product-price">
-                        <span class="current-price">180.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="4">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-badge">Mới</div>
-                    <div class="product-image">
-                        <img src="./images/OIP (3).jpg" alt="Calcium + D3">
-                    </div>
-                    <h3>Calcium + D3</h3>
-                    <div class="product-price">
-                        <span class="current-price">95.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="5">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
-
-                <div class="product-card">
-                    <div class="product-badge">-10%</div>
-                    <div class="product-image">
-                        <img src="./images/OIP (4).jpg" alt="Glucosamine 1500mg">
-                    </div>
-                    <h3>Glucosamine 1500mg</h3>
-                    <div class="product-price">
-                        <span class="current-price">320.000đ</span>
-                        <span class="old-price">355.000đ</span>
-                    </div>
-                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="add_to_cart" value="1">
-                            <input type="hidden" name="product_id" value="6">
-                            <button type="submit" class="add-to-cart">
-                                <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                            </button>
-                        </form>
-                    <?php else: ?>
-                        <a href="login.php" class="add-to-cart" style="text-decoration: none;">
-                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
-                        </a>
-                    <?php endif; ?>
-                </div>
+                <?php else: ?>
+                    <?php foreach ($featured_products as $product): ?>
+                        <div class="product-card" data-product-id="<?php echo $product['ma_san_pham']; ?>">
+                            <?php 
+                            // Badge
+                            if ($product['can_don_thuoc']) {
+                                echo '<div class="product-badge prescription">Kê đơn</div>';
+                            } elseif ($product['gia_khuyen_mai'] && $product['gia_khuyen_mai'] < $product['gia_ban']) {
+                                $discount = round((($product['gia_ban'] - $product['gia_khuyen_mai']) / $product['gia_ban']) * 100);
+                                echo '<div class="product-badge">Giảm ' . $discount . '%</div>';
+                            } elseif ($product['san_pham_noi_bat']) {
+                                echo '<div class="product-badge">Nổi bật</div>';
+                            }
+                            ?>
+                            <div class="product-image">
+                                <img src="<?php echo $product['duong_dan_hinh_anh'] ?: 'https://via.placeholder.com/150x150?text=' . urlencode($product['ten_san_pham']); ?>" 
+                                     alt="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                            </div>
+                            <h3><?php echo htmlspecialchars($product['ten_san_pham']); ?></h3>
+                            <div class="product-manufacturer"><?php echo htmlspecialchars($product['ten_nha_san_xuat'] ?: 'Không rõ'); ?></div>
+                            <div class="product-price">
+                                <span class="current-price">
+                                    <?php echo number_format($product['gia_khuyen_mai'] && $product['gia_khuyen_mai'] < $product['gia_ban'] ? $product['gia_khuyen_mai'] : $product['gia_ban'], 0, ',', '.'); ?>đ
+                                </span>
+                                <?php if ($product['gia_khuyen_mai'] && $product['gia_khuyen_mai'] < $product['gia_ban']): ?>
+                                    <span class="old-price"><?php echo number_format($product['gia_ban'], 0, ',', '.'); ?>đ</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="product-actions">
+                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="add_to_cart" value="1">
+                                        <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
+                                        <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($product['ten_san_pham']); ?>">
+                                        <input type="hidden" name="product_price" value="<?php echo $product['gia_khuyen_mai'] ?: $product['gia_ban']; ?>">
+                                        <button type="submit" class="add-to-cart">
+                                            <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <a href="login.php" class="add-to-cart" style="text-decoration: none;">
+                                        <i class="fas fa-cart-plus"></i> Thêm vào giỏ
+                                    </a>
+                                <?php endif; ?>
+                                <a href="chi-tiet-san-pham.php?id=<?php echo $product['ma_san_pham']; ?>" class="quick-view" title="Xem chi tiết sản phẩm">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
     </section>
+
+    
 
     <!-- Categories -->
     <section class="categories-section">
@@ -438,7 +773,7 @@ if ($error_message) {
                         <div class="member-avatar">D</div>
                         <div class="member-name">Lý Khánh Đăng</div>
                         <!-- <div class="member-role">Quality Assurance - Tester</div> -->
-                        <div class="member-id">MSSV: 21010004</div>
+                        <div class="member-id">MSSV: 083205014004</div>
                     </div>
                 </div>
             </div>

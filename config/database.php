@@ -57,4 +57,18 @@ function create_slug($str) {
 
 // Optional: Kiểm tra kết nối thành công
 // echo "Kết nối database thành công!";
+
+// --- HƯỚNG DẪN TẠO BẢNG QUẢNG CÁO ĐỘNG ---
+//
+// CREATE TABLE quang_cao (
+//     id INT AUTO_INCREMENT PRIMARY KEY,
+//     tieu_de VARCHAR(255),
+//     mo_ta TEXT,
+//     hinh_anh VARCHAR(255),
+//     link VARCHAR(255),
+//     trang_thai TINYINT DEFAULT 1,
+//     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP
+// );
+//
+// Sau khi tạo bảng, thêm vài dòng dữ liệu mẫu để test banner động.
 ?>

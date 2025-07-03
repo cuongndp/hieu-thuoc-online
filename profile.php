@@ -112,6 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!password_verify($current_password, $user['mat_khau_ma_hoa'])) {
                 $message = 'Mật khẩu hiện tại không chính xác';
                 $message_type = 'error';
+            } elseif (password_verify($new_password, $user['mat_khau_ma_hoa'])) {
+                $message = 'Mật khẩu mới không được trùng với mật khẩu hiện tại';
+                $message_type = 'error';
             } else {
                 // Cập nhật mật khẩu mới
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
@@ -191,14 +194,6 @@ if ($join_date_field) {
     <div class="profile-container">
         <!-- Sidebar -->
         <div class="profile-sidebar">
-            <div class="user-avatar">
-                <div class="avatar-circle">
-                    <?php echo strtoupper(substr($user_info['ho_ten'], 0, 1)); ?>
-                </div>
-                <div class="user-name"><?php echo htmlspecialchars($user_info['ho_ten']); ?></div>
-                <div class="user-email"><?php echo htmlspecialchars($user_info['email']); ?></div>
-            </div>
-
             <ul class="nav-menu">
                 <li class="nav-item">
                     <a href="profile.php?tab=profile" class="nav-link <?php echo $active_tab === 'profile' ? 'active' : ''; ?>">
@@ -352,25 +347,6 @@ if ($join_date_field) {
                             Đổi mật khẩu
                         </button>
                     </form>
-
-                    <!-- Account Info -->
-                    <div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
-                        <h3>Thông tin tài khoản</h3>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Ngày tạo tài khoản:</label>
-                                <input type="text" value="<?php echo date('d/m/Y H:i', strtotime($user_info['ngay_tao'])); ?>" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>Vai trò:</label>
-                                <input type="text" value="<?php echo ucfirst($user_info['vai_tro'] ?? 'Khách hàng'); ?>" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label>ID tài khoản:</label>
-                                <input type="text" value="<?php echo str_pad($user_info['ma_nguoi_dung'], 6, '0', STR_PAD_LEFT); ?>" readonly>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

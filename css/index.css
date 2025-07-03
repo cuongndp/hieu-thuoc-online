@@ -377,11 +377,42 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .add-to-cart:hover {
             background: #3367d6;
             transform: translateY(-2px);
+        }
+
+        .product-actions {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .quick-view {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            color: #4285f4;
+            border: 2px solid #4285f4;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            font-size: 1.1rem;
+            transition: background 0.2s, color 0.2s;
+            text-decoration: none;
+        }
+        .quick-view:hover {
+            background: #4285f4;
+            color: #fff;
         }
 
         /* Categories */

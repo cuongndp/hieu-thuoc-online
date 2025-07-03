@@ -26,6 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $gender = $_POST['gender'] ?? 'Nam';
         $birthdate = $_POST['birthdate'] ?? null;
         
+        // Validation ngày sinh
+        if ($birthdate && $birthdate !== '') {
+            $birthdate_obj = new DateTime($birthdate);
+            $today = new DateTime();
+            $min_date = new DateTime('1900-01-01');
+            $max_date = new DateTime();
+            $max_date->modify('-13 years'); // Ít nhất 13 tuổi
+            
+            if ($birthdate_obj < $min_date) {
+                $message = 'Ngày sinh không thể trước năm 1900';
+                $message_type = 'error';
+            } elseif ($birthdate_obj > $max_date) {
+                $message = 'Bạn phải ít nhất 13 tuổi để sử dụng dịch vụ';
+                $message_type = 'error';
+            }
+        }
+        
         // Validation
         if (empty($fullname) || empty($email) || empty($phone)) {
             $message = 'Vui lòng nhập đầy đủ thông tin bắt buộc';
@@ -311,7 +328,11 @@ if ($join_date_field) {
                             <div class="form-group">
                                 <label for="birthdate">Ngày sinh</label>
                                 <input type="date" id="birthdate" name="birthdate" 
-                                       value="<?php echo $user_info['ngay_sinh']; ?>">
+                                       value="<?php echo $user_info['ngay_sinh']; ?>"
+                                       min="1900-01-01" 
+                                       max="<?php echo date('Y-m-d', strtotime('-13 years')); ?>"
+                                       onchange="validateBirthdate(this)">
+                                <small class="form-text">Ngày sinh phải từ năm 1900 và bạn phải ít nhất 13 tuổi</small>
                             </div>
                         </div>
 
@@ -450,7 +471,26 @@ if ($join_date_field) {
     </footer>
 
     <script>
-        // JavaScript CHỈ cho UI - kiểm tra độ mạnh mật khẩu
+        // JavaScript CHỈ cho UI - kiểm tra độ mạnh mật khẩu và ngày sinh
+        function validateBirthdate(input) {
+            const selectedDate = new Date(input.value);
+            const today = new Date();
+            const minDate = new Date('1900-01-01');
+            const maxDate = new Date();
+            maxDate.setFullYear(today.getFullYear() - 13); // Ít nhất 13 tuổi
+            
+            if (selectedDate < minDate) {
+                input.setCustomValidity('Ngày sinh không thể trước năm 1900');
+                return false;
+            } else if (selectedDate > maxDate) {
+                input.setCustomValidity('Bạn phải ít nhất 13 tuổi để đăng ký');
+                return false;
+            } else {
+                input.setCustomValidity('');
+                return true;
+            }
+        }
+        
         function checkPasswordStrength(password) {
             let strength = 0;
             let feedback = '';

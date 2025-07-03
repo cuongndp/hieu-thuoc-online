@@ -177,6 +177,21 @@
         .form-group select:focus {
             border-color: #4285f4;
         }
+        
+        .form-text {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .form-group input:invalid {
+            border-color: #e74c3c;
+        }
+        
+        .form-group input:invalid + .form-text {
+            color: #e74c3c;
+        }
 
         .required {
             color: #e74c3c;

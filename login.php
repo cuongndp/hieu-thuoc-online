@@ -84,6 +84,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $show_register = true; // Hiển thị form đăng ký nếu có lỗi
         
+        // Validation ngày sinh
+        if ($birthdate && $birthdate !== '') {
+            $birthdate_obj = new DateTime($birthdate);
+            $today = new DateTime();
+            $min_date = new DateTime('1900-01-01');
+            $max_date = new DateTime();
+            $max_date->modify('-13 years'); // Ít nhất 13 tuổi
+            
+            if ($birthdate_obj < $min_date) {
+                $message = 'Ngày sinh không thể trước năm 1900';
+                $message_type = 'error';
+            } elseif ($birthdate_obj > $max_date) {
+                $message = 'Bạn phải ít nhất 13 tuổi để đăng ký';
+                $message_type = 'error';
+            }
+        }
+        
         // Validation
         if (empty($fullname) || empty($email) || empty($phone) || empty($password)) {
             $message = 'Vui lòng nhập đầy đủ thông tin';
@@ -307,7 +324,12 @@ $show_register = isset($show_register) ? (bool)$show_register : false;
 
                     <div class="form-group">
                         <label for="register-birthdate">Ngày sinh (tùy chọn)</label>
-                        <input type="date" id="register-birthdate" name="birthdate" value="<?php echo isset($_POST['birthdate']) && $show_register ? htmlspecialchars($_POST['birthdate']) : ''; ?>">
+                        <input type="date" id="register-birthdate" name="birthdate" 
+                               value="<?php echo isset($_POST['birthdate']) && $show_register ? htmlspecialchars($_POST['birthdate']) : ''; ?>"
+                               min="1900-01-01" 
+                               max="<?php echo date('Y-m-d', strtotime('-13 years')); ?>"
+                               onchange="validateBirthdate(this)">
+                        <small class="form-text">Ngày sinh phải từ năm 1900 và bạn phải ít nhất 13 tuổi</small>
                         <!-- <i class="fas fa-birthday-cake"></i> -->
                     </div>
 
@@ -343,6 +365,25 @@ $show_register = isset($show_register) ? (bool)$show_register : false;
 
     <script>
         // JavaScript CHỈ cho UI - không có logic backend
+        function validateBirthdate(input) {
+            const selectedDate = new Date(input.value);
+            const today = new Date();
+            const minDate = new Date('1900-01-01');
+            const maxDate = new Date();
+            maxDate.setFullYear(today.getFullYear() - 13); // Ít nhất 13 tuổi
+            
+            if (selectedDate < minDate) {
+                input.setCustomValidity('Ngày sinh không thể trước năm 1900');
+                return false;
+            } else if (selectedDate > maxDate) {
+                input.setCustomValidity('Bạn phải ít nhất 13 tuổi để đăng ký');
+                return false;
+            } else {
+                input.setCustomValidity('');
+                return true;
+            }
+        }
+        
         function togglePassword(inputId, icon) {
             const input = document.getElementById(inputId);
             if (input.type === 'password') {

@@ -369,7 +369,7 @@ function getImageUrl($image_path, $product_name = 'Product') {
                             <div class="rating-bar">
                                 <span class="star-label"><?= $i ?> sao</span>
                                 <div class="bar-container">
-                                    <div class="bar-fill" style="width: <?= $total_reviews > 0 ? ($rating_stats["so_sao_$i"] / $total_reviews) * 100 : 0 ?>%"></div>
+                                    <div class="bar-fill" style="width: <?= $total_reviews > 0 ? number_format(($rating_stats["so_sao_$i"] / $total_reviews) * 100, 2) : 0 ?>%;"></div>
                                 </div>
                                 <span class="count"><?= $rating_stats["so_sao_$i"] ?? 0 ?></span>
                             </div>

@@ -205,7 +205,7 @@ $has_reviewed = false;
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
     $user_id = $_SESSION['user_id'] ?? 0;
     $can_review = has_user_purchased_product($user_id, $product_id, $conn);
-    $has_reviewed = has_user_reviewed_product($user_id, $product_id, $conn);
+    $has_reviewed = has_user_reviewed_product($user_id, $product_id, 0, $conn);
 }
 ?>
 <!DOCTYPE html>

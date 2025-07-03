@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'config/database.php';
+include 'config/reviews.php';
 
 // Lấy product ID từ URL
 $product_id = $_GET['id'] ?? 0;
@@ -159,6 +160,9 @@ if ($cart_message) {
     unset($_SESSION['cart_message']);
 }
 
+// Thông báo đánh giá thành công
+$review_success = isset($_GET['review_success']) && $_GET['review_success'] == 1;
+
 // Tính toán giá và khuyến mãi
 $current_price = $product['gia_khuyen_mai'] ?: $product['gia_ban'];
 $discount_percent = 0;
@@ -190,6 +194,19 @@ $expiry_date = '';
 if ($product['han_su_dung']) {
     $expiry_date = date('d/m/Y', strtotime($product['han_su_dung']));
 }
+
+// Lấy đánh giá sản phẩm
+$reviews = get_product_reviews($product_id, $conn, 5, 0);
+$rating_stats = get_product_rating_stats($product_id, $conn);
+
+// Kiểm tra xem user đã mua và có thể đánh giá sản phẩm này không
+$can_review = false;
+$has_reviewed = false;
+if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
+    $user_id = $_SESSION['user_id'] ?? 0;
+    $can_review = has_user_purchased_product($user_id, $product_id, $conn);
+    $has_reviewed = has_user_reviewed_product($user_id, $product_id, $conn);
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -202,11 +219,216 @@ if ($product['han_su_dung']) {
     <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/chi-tiet-san-pham.css">
     <style>
+        /* Product Reviews Styles */
+        .product-reviews {
+            background: #f8f9fa;
+            padding: 40px 0;
+            margin-top: 40px;
+        }
         
+        .reviews-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .reviews-header h2 {
+            color: #333;
+            margin: 0;
+        }
+        
+        .rating-summary {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            flex: 1;
+        }
+        
+        .overall-rating {
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .rating-score .score {
+            font-size: 36px;
+            font-weight: bold;
+            color: #f39c12;
+            display: block;
+        }
+        
+        .rating-score .stars {
+            margin: 5px 0;
+        }
+        
+        .rating-count {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .rating-breakdown {
+            flex: 1;
+        }
+        
+        .rating-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .star-label {
+            min-width: 50px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .bar-container {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: #f39c12;
+            transition: width 0.3s ease;
+        }
+        
+        .count {
+            min-width: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+        }
+        
+        .review-btn {
+            background: #27ae60;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .review-btn:hover {
+            background: #229954;
+        }
+        
+        .reviewed-badge {
+            background: #f39c12;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .review-note {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .reviews-list {
+            margin-top: 30px;
+        }
+        
+        .review-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .reviewer-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .review-date {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .review-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .review-content {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .no-reviews {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .view-more-reviews {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .view-more-btn {
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .view-more-btn:hover {
+            background: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .reviews-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .rating-summary {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .review-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
+
+    <?php if ($review_success): ?>
+        <div class="alert alert-success" style="max-width:800px;margin:20px auto 0 auto;">
+            <i class="fas fa-check-circle"></i>
+            Đánh giá của bạn đã được gửi thành công! Cảm ơn bạn đã chia sẻ trải nghiệm.
+        </div>
+    <?php endif; ?>
 
     <div class="product-detail-container">
         <!-- Success Message -->
@@ -464,6 +686,108 @@ if ($product['han_su_dung']) {
                     <p><strong>Cập nhật cuối:</strong> <?php echo date('d/m/Y', strtotime($product['ngay_cap_nhat'])); ?></p>
                     <?php endif; ?>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Reviews -->
+    <div class="product-reviews">
+        <div class="container">
+            <div class="reviews-header">
+                <h2><i class="fas fa-star"></i> Đánh giá sản phẩm</h2>
+                
+                <!-- Rating Summary -->
+                <div class="rating-summary">
+                    <div class="overall-rating">
+                        <div class="rating-score">
+                            <span class="score"><?= number_format($rating_stats['trung_binh_sao'] ?? 0, 1) ?></span>
+                            <div class="stars">
+                                <?= format_stars($rating_stats['trung_binh_sao'] ?? 0) ?>
+                            </div>
+                        </div>
+                        <div class="rating-count">
+                            <span><?= $rating_stats['tong_so_danh_gia'] ?? 0 ?> đánh giá</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Rating Breakdown -->
+                    <div class="rating-breakdown">
+                        <?php for ($i = 5; $i >= 1; $i--): ?>
+                            <div class="rating-bar">
+                                <span class="star-label"><?= $i ?> sao</span>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="width: <?= $rating_stats['tong_so_danh_gia'] > 0 ? ($rating_stats["so_sao_$i"] / $rating_stats['tong_so_danh_gia']) * 100 : 0 ?>%"></div>
+                                </div>
+                                <span class="count"><?= $rating_stats["so_sao_$i"] ?? 0 ?></span>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                
+                <!-- Review Button -->
+                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                    <?php if ($can_review && !$has_reviewed): ?>
+                        <a href="review.php?product_id=<?= $product_id ?>" class="review-btn">
+                            <i class="fas fa-star"></i> Viết đánh giá
+                        </a>
+                    <?php elseif ($has_reviewed): ?>
+                        <span class="reviewed-badge">
+                            <i class="fas fa-check"></i> Bạn đã đánh giá sản phẩm này
+                        </span>
+                    <?php else: ?>
+                        <span class="review-note">
+                            <i class="fas fa-info-circle"></i> Mua sản phẩm để đánh giá
+                        </span>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <a href="login.php" class="review-btn">
+                        <i class="fas fa-sign-in-alt"></i> Đăng nhập để đánh giá
+                    </a>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Reviews List -->
+            <div class="reviews-list">
+                <?php if (empty($reviews)): ?>
+                    <div class="no-reviews">
+                        <i class="fas fa-star" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                        <h3>Chưa có đánh giá nào</h3>
+                        <p>Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($reviews as $review): ?>
+                        <div class="review-item">
+                            <div class="review-header">
+                                <div class="reviewer-info">
+                                    <div class="reviewer-name"><?= htmlspecialchars($review['ho_ten']) ?></div>
+                                    <div class="review-date"><?= date('d/m/Y', strtotime($review['ngay_tao'])) ?></div>
+                                </div>
+                                <div class="review-rating">
+                                    <?= format_stars($review['so_sao']) ?>
+                                    <span class="review-score" style="font-weight:bold;color:#f39c12;font-size:16px;margin-left:8px;">
+                                        <?= $review['so_sao'] ?>/5
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <?php if ($review['tieu_de']): ?>
+                                <div class="review-title"><?= htmlspecialchars($review['tieu_de']) ?></div>
+                            <?php endif; ?>
+                            
+                            <div class="review-content">
+                                <?= nl2br(htmlspecialchars($review['noi_dung'])) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                    
+                    <?php if ($rating_stats['tong_so_danh_gia'] > 5): ?>
+                        <div class="view-more-reviews">
+                            <a href="reviews.php?product_id=<?= $product_id ?>" class="view-more-btn">
+                                Xem tất cả <?= $rating_stats['tong_so_danh_gia'] ?> đánh giá
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>

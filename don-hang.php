@@ -67,6 +67,7 @@ $orders_sql = "SELECT
                 dh.phi_van_chuyen,
                 dh.tien_giam_gia,
                 dh.tong_tien_thanh_toan,
+                dh.diem_tich_duoc,
                 dh.ghi_chu,
                 dh.ngay_giao_du_kien,
                 dh.ngay_giao_thuc_te,
@@ -320,7 +321,7 @@ function getImageUrl($image_path, $product_name = 'Product') {
                                 </div>
                                 <?php if ($order['tien_giam_gia'] > 0): ?>
                                     <div class="summary-row">
-                                        <span>Giảm giá:</span>
+                                        <span>Giảm giá (điểm tích lũy):</span>
                                         <span style="color: #27ae60;">-<?php echo formatPrice($order['tien_giam_gia']); ?>đ</span>
                                     </div>
                                 <?php endif; ?>
@@ -328,6 +329,12 @@ function getImageUrl($image_path, $product_name = 'Product') {
                                     <span>Tổng cộng:</span>
                                     <span style="color: #ff4757;"><?php echo formatPrice($order['tong_tien_thanh_toan']); ?>đ</span>
                                 </div>
+                                <?php if ($order['diem_tich_duoc'] > 0): ?>
+                                    <div class="summary-row" style="color: #f39c12; font-size: 12px;">
+                                        <span><i class="fas fa-star"></i> Điểm tích lũy nhận được:</span>
+                                        <span>+<?php echo number_format($order['diem_tich_duoc'], 0, ',', '.'); ?> điểm</span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <!-- Chi tiết đơn hàng -->
@@ -343,6 +350,12 @@ function getImageUrl($image_path, $product_name = 'Product') {
                                     <h4><i class="fas fa-info-circle"></i> Thông tin thêm</h4>
                                     <?php if (!empty($order['ghi_chu'])): ?>
                                         <p><strong>Ghi chú:</strong> <?php echo htmlspecialchars($order['ghi_chu']); ?></p>
+                                    <?php endif; ?>
+                                    <?php if ($order['tien_giam_gia'] > 0): ?>
+                                        <p><strong>Điểm đã sử dụng:</strong> <?php echo number_format($order['tien_giam_gia'], 0, ',', '.'); ?> điểm (<?php echo formatPrice($order['tien_giam_gia']); ?>đ)</p>
+                                    <?php endif; ?>
+                                    <?php if ($order['diem_tich_duoc'] > 0): ?>
+                                        <p><strong>Điểm tích lũy:</strong> +<?php echo number_format($order['diem_tich_duoc'], 0, ',', '.'); ?> điểm</p>
                                     <?php endif; ?>
                                     <?php if (!empty($order['ngay_giao_thuc_te'])): ?>
                                         <p><strong>Đã giao lúc:</strong> <?php echo formatDate($order['ngay_giao_thuc_te']); ?></p>
@@ -371,7 +384,7 @@ function getImageUrl($image_path, $product_name = 'Product') {
                                     </a>
                                     <a href="review.php?order_id=<?= $order['ma_don_hang'] ?>" class="btn btn-secondary">
                                         <i class="fas fa-star"></i>
-                                        Đánh giá
+                                        Đánh giá sản phẩm
                                     </a>
                                 <?php endif; ?>
                             </div>

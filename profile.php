@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'config/database.php';
+include 'config/loyalty_points.php';
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -144,6 +145,10 @@ $user_stmt->execute();
 $user_result = $user_stmt->get_result();
 $user_info = $user_result->fetch_assoc();
 
+// Lấy thông tin tích điểm
+$loyalty_points = get_user_loyalty_points($user_id, $conn);
+$loyalty_history = get_loyalty_history($user_id, $conn, 5);
+
 // Thống kê cơ bản - chỉ dùng thông tin từ session và giỏ hàng
 $stats = [
     'total_orders' => 0,
@@ -208,6 +213,12 @@ if ($join_date_field) {
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="profile.php?tab=loyalty" class="nav-link <?php echo $active_tab === 'loyalty' ? 'active' : ''; ?>">
+                        <i class="fas fa-star"></i>
+                        Tích điểm
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="cart.php" class="nav-link">
                         <i class="fas fa-shopping-cart"></i>
                         Giỏ hàng
@@ -231,6 +242,8 @@ if ($join_date_field) {
                         Thông tin cá nhân
                     <?php elseif ($active_tab === 'security'): ?>
                         Cài đặt bảo mật
+                    <?php elseif ($active_tab === 'loyalty'): ?>
+                        Điểm tích lũy
                     <?php endif; ?>
                 </h1>
             </div>
@@ -250,8 +263,8 @@ if ($join_date_field) {
                     <!-- Stats -->
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <span class="stat-number"><?php echo $stats['cart_items']; ?></span>
-                            <div class="stat-label">Sản phẩm trong giỏ</div>
+                            <span class="stat-number"><?php echo number_format($loyalty_points, 0, ',', '.'); ?></span>
+                            <div class="stat-label">Điểm tích lũy</div>
                         </div>
                         <div class="stat-card">
                             <span class="stat-number"><?php echo $days_member; ?></span>
@@ -307,6 +320,73 @@ if ($join_date_field) {
                             Cập nhật thông tin
                         </button>
                     </form>
+                </div>
+
+                <!-- Loyalty Points Tab -->
+                <div id="loyalty" class="tab-content <?php echo $active_tab === 'loyalty' ? 'active' : ''; ?>">
+                    <!-- Thông tin tích điểm -->
+                    <div class="loyalty-overview">
+                        <div class="loyalty-card">
+                            <div class="loyalty-header">
+                                <i class="fas fa-star"></i>
+                                <h3>Điểm tích lũy của bạn</h3>
+                            </div>
+                            <div class="loyalty-points">
+                                <span class="points-number"><?php echo number_format($loyalty_points, 0, ',', '.'); ?></span>
+                                <span class="points-label">điểm</span>
+                            </div>
+                            <div class="loyalty-value">
+                                Giá trị quy đổi: <?php echo number_format($loyalty_points * 1000, 0, ',', '.'); ?>đ
+                            </div>
+                        </div>
+
+                        <div class="loyalty-info">
+                            <h4><i class="fas fa-info-circle"></i> Cách thức tích điểm</h4>
+                            <ul>
+                                <li>Mua thuốc với đơn hàng từ 50,000đ trở lên</li>
+                                <li>Nhận 1 điểm cho mỗi 10,000đ chi tiêu</li>
+                                <li>Tối đa 100 điểm cho mỗi đơn hàng</li>
+                                <li>1 điểm = 1,000đ khi sử dụng (sắp ra mắt)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Lịch sử tích điểm -->
+                    <div class="loyalty-history">
+                        <h4><i class="fas fa-history"></i> Lịch sử tích điểm gần đây</h4>
+                        <?php if (!empty($loyalty_history)): ?>
+                            <div class="history-list">
+                                <?php foreach ($loyalty_history as $history): ?>
+                                    <div class="history-item">
+                                        <div class="history-icon">
+                                            <?php if ($history['loai_giao_dich'] === 'tich_diem'): ?>
+                                                <i class="fas fa-plus-circle" style="color: #27ae60;"></i>
+                                            <?php else: ?>
+                                                <i class="fas fa-minus-circle" style="color: #e74c3c;"></i>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="history-content">
+                                            <div class="history-description"><?php echo htmlspecialchars($history['mo_ta']); ?></div>
+                                            <div class="history-date"><?php echo date('d/m/Y H:i', strtotime($history['ngay_tao'])); ?></div>
+                                        </div>
+                                        <div class="history-points">
+                                            <?php if ($history['so_diem'] > 0): ?>
+                                                <span class="points-positive">+<?php echo number_format($history['so_diem'], 0, ',', '.'); ?></span>
+                                            <?php else: ?>
+                                                <span class="points-negative"><?php echo number_format($history['so_diem'], 0, ',', '.'); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="no-history">
+                                <i class="fas fa-star"></i>
+                                <p>Bạn chưa có lịch sử tích điểm nào.</p>
+                                <p>Hãy đặt hàng từ 50,000đ để bắt đầu tích điểm nhé!</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <!-- Security Tab -->

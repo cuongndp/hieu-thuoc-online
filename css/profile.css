@@ -118,7 +118,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -262,6 +262,160 @@
         .strength-medium { color: #f39c12; }
         .strength-strong { color: #27ae60; }
 
+        /* Loyalty Points Styles */
+        .loyalty-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .loyalty-card {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
+        }
+
+        .loyalty-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .loyalty-header i {
+            font-size: 1.5rem;
+        }
+
+        .loyalty-points {
+            margin: 15px 0;
+        }
+
+        .points-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .points-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .loyalty-value {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loyalty-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .loyalty-info h4 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loyalty-info ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .loyalty-info li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .loyalty-info li:before {
+            content: "•";
+            color: #f39c12;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .loyalty-history {
+            margin-top: 30px;
+        }
+
+        .loyalty-history h4 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list {
+            space-y: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .history-icon {
+            font-size: 1.2rem;
+        }
+
+        .history-content {
+            flex: 1;
+        }
+
+        .history-description {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-date {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .history-points {
+            font-weight: bold;
+        }
+
+        .points-positive {
+            color: #27ae60;
+        }
+
+        .points-negative {
+            color: #e74c3c;
+        }
+
+        .no-history {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .no-history i {
+            font-size: 3rem;
+            color: #f39c12;
+            margin-bottom: 15px;
+        }
+
         @media (max-width: 768px) {
             .profile-container {
                 grid-template-columns: 1fr;
@@ -280,6 +434,10 @@
             }
 
             .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .loyalty-overview {
                 grid-template-columns: 1fr;
             }
         }

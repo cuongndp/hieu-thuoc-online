@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'config/database.php';
+include 'config/loyalty_points.php';
 
 // Kiểm tra đăng nhập
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -9,6 +10,8 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 }
 
 $user_id = $_SESSION['user_id'] ?? 0;
+
+
 
 // Lấy giỏ hàng từ database 
 $cart_sql = "SELECT ma_san_pham, so_luong FROM gio_hang WHERE ma_nguoi_dung = ? ORDER BY ngay_cap_nhat DESC";
@@ -75,24 +78,60 @@ foreach ($cart_items as $item) {
 $shipping = $subtotal >= 500000 ? 0 : 30000;
 $total = $subtotal + $shipping;
 
-// Lấy thông tin user để điền sẵn form
+// Lấy thông tin user để điền sẵn form và điểm tích lũy
 $user_info = null;
+$user_loyalty_points = 0;
 if ($user_id) {
-    $sql = "SELECT ho_ten, email, so_dien_thoai, dia_chi FROM nguoi_dung WHERE ma_nguoi_dung = ?";
+    $sql = "SELECT ho_ten, email, so_dien_thoai, dia_chi, diem_tich_luy FROM nguoi_dung WHERE ma_nguoi_dung = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $user_info = $result->fetch_assoc();
+    $user_loyalty_points = $user_info['diem_tich_luy'] ?? 0;
     $stmt->close();
 }
 
-// Xử lý đặt hàng
+// Khởi tạo các biến
 $order_success = false;
 $success_order_id = '';
 $error_message = '';
+$points_discount = 0;
+$points_used = 0;
+$earned_points = 0;
 
+// Xử lý sử dụng điểm (nếu có)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['use_points']) && !empty($_POST['points_to_use'])) {
+    $points_to_use = intval($_POST['points_to_use']);
+    if ($points_to_use > 0 && $points_to_use <= $user_loyalty_points) {
+        $points_discount = points_to_discount($points_to_use);
+        $points_used = $points_to_use;
+        
+        // Lưu vào session để sử dụng khi đặt hàng
+        $_SESSION['points_used'] = $points_used;
+        $_SESSION['points_discount'] = $points_discount;
+        
+        // Tính lại tổng tiền sau khi giảm giá
+        $total = max(0, $subtotal + $shipping - $points_discount);
+    }
+}
+
+// Xử lý đặt hàng - lấy điểm đã sử dụng từ session hoặc form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
+    // Lấy điểm đã sử dụng từ session hoặc form
+    $points_used = intval($_SESSION['points_used'] ?? $_POST['points_used'] ?? 0);
+    if ($points_used > 0 && $points_used <= $user_loyalty_points) {
+        $points_discount = points_to_discount($points_used);
+        $total = max(0, $subtotal + $shipping - $points_discount);
+    } else {
+        $points_used = 0;
+        $points_discount = 0;
+        $total = $subtotal + $shipping;
+    }
+    
+    // Xóa session sau khi sử dụng
+    unset($_SESSION['points_used']);
+    unset($_SESSION['points_discount']);
     try {
         // Validate dữ liệu
         $required_fields = ['ho_ten', 'so_dien_thoai', 'tinh_thanh', 'quan_huyen', 'phuong_xa', 'dia_chi_chi_tiet', 'phuong_thuc_thanh_toan'];
@@ -186,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
         $stmt = $conn->prepare($sql);
         $trang_thai = 'cho_xac_nhan';
-        $tien_giam_gia = 0;
+        $tien_giam_gia = $points_discount; // Sử dụng điểm giảm giá
         $can_don_thuoc = 0;
         $hinh_anh_don_thuoc = '';
         $ghi_chu = $_POST['ghi_chu'] ?? '';
@@ -243,7 +282,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             $stmt->close();
         }
 
-        // 4. Xóa giỏ hàng
+        // 4. Xử lý điểm tích lũy và sử dụng điểm
+        
+        // 4.1. Sử dụng điểm nếu có
+        if ($points_used > 0) {
+            $use_points_description = "Sử dụng " . number_format($points_used, 0, ',', '.') . " điểm giảm " . number_format($points_discount, 0, ',', '.') . "đ cho đơn hàng #" . $ma_don_hang;
+            use_loyalty_points($user_id, $points_used, $ma_don_hang_id, $use_points_description, $conn);
+        }
+        
+        // 4.2. Tính và thêm điểm tích lũy từ đơn hàng (tính trên giá trị gốc trước giảm giá)
+        $loyalty_points = calculate_loyalty_points($subtotal + $shipping);
+        if ($loyalty_points > 0) {
+            // Cập nhật điểm tích được cho đơn hàng
+            $update_order_points_sql = "UPDATE don_hang SET diem_tich_duoc = ? WHERE ma_don_hang = ?";
+            $update_order_points_stmt = $conn->prepare($update_order_points_sql);
+            $update_order_points_stmt->bind_param("ii", $loyalty_points, $ma_don_hang_id);
+            $update_order_points_stmt->execute();
+            $update_order_points_stmt->close();
+            
+            // Thêm điểm cho user
+            $points_description = "Tích điểm từ đơn hàng #" . $ma_don_hang . " - Giá trị: " . number_format($subtotal + $shipping, 0, ',', '.') . "đ";
+            add_loyalty_points($user_id, $loyalty_points, $ma_don_hang_id, $points_description, $conn);
+        }
+
+        // 5. Xóa giỏ hàng
         $sql = "DELETE FROM gio_hang WHERE ma_nguoi_dung = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $user_id);
@@ -256,6 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         
         $order_success = true;
         $success_order_id = $ma_don_hang; // Hiển thị mã string cho user
+        $earned_points = $loyalty_points; // Lưu điểm đã tích để hiển thị
 
         // Reset giỏ hàng để không hiển thị nữa
         $cart_items = [];
@@ -315,6 +378,12 @@ function getImageUrl($image_path, $product_name = 'Product') {
             <p>Mã đơn hàng của bạn: <strong>
                     <?= $success_order_id ?>
                 </strong></p>
+            <?php if (isset($earned_points) && $earned_points > 0): ?>
+            <div class="loyalty-earned" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 10px; margin: 15px 0; text-align: center;">
+                <i class="fas fa-star" style="color: #f39c12; margin-right: 5px;"></i>
+                <span style="color: #856404; font-weight: bold;">Bạn đã được tích <?php echo $earned_points; ?> điểm từ đơn hàng này!</span>
+            </div>
+            <?php endif; ?>
             <p>Chúng tôi sẽ liên hệ với bạn trong thời gian sớm nhất để xác nhận đơn hàng.</p>
             <a href="index.php" class="btn-primary">
                 <i class="fas fa-home"></i> Về trang chủ
@@ -522,6 +591,48 @@ function getImageUrl($image_path, $product_name = 'Product') {
                     </span>
                 </div>
 
+                <!-- Sử dụng điểm tích lũy -->
+                <?php if ($user_loyalty_points > 0): ?>
+                <div class="loyalty-section" style="border-top: 1px solid #eee; padding: 15px 0; margin: 10px 0;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <i class="fas fa-star" style="color: #f39c12;"></i>
+                        <span style="font-weight: bold;">Sử dụng điểm tích lũy</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+                        Bạn có <strong style="color: #f39c12;"><?php echo number_format($user_loyalty_points, 0, ',', '.'); ?> điểm</strong> 
+                        (= <?php echo number_format(points_to_discount($user_loyalty_points), 0, ',', '.'); ?>đ)
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" name="points_to_use" id="points_to_use" 
+                               min="0" max="<?php echo $user_loyalty_points; ?>" 
+                               placeholder="Nhập số điểm" 
+                               style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px;"
+                               value="<?php echo $_SESSION['points_used'] ?? $_POST['points_to_use'] ?? ''; ?>">
+                        <button type="submit" name="use_points" 
+                                style="padding: 8px 15px; background: #f39c12; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            Áp dụng
+                        </button>
+                    </div>
+                    
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                        💡 Mẹo: 1 điểm = 1đ giảm giá
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php 
+                // Lấy thông tin điểm từ session hoặc biến hiện tại
+                $display_points_used = $_SESSION['points_used'] ?? $points_used ?? 0;
+                $display_points_discount = $_SESSION['points_discount'] ?? $points_discount ?? 0;
+                ?>
+                <?php if ($display_points_discount > 0): ?>
+                <div class="summary-row" style="color: #f39c12;">
+                    <span>Giảm giá (<?php echo number_format($display_points_used, 0, ',', '.'); ?> điểm):</span>
+                    <span>-<?= formatPrice($display_points_discount) ?>đ</span>
+                </div>
+                <?php endif; ?>
+
                 <?php if ($shipping == 0 && $subtotal >= 500000): ?>
                 <div class="summary-row" style="font-size: 12px; color: #2ed573;">
                     <span>🎉 Bạn được miễn phí vận chuyển!</span>
@@ -536,17 +647,25 @@ function getImageUrl($image_path, $product_name = 'Product') {
                 </div>
                 <?php endif; ?>
 
+                <?php 
+                // Tính tổng tiền hiển thị
+                $display_total = $subtotal + $shipping - $display_points_discount;
+                $display_total = max(0, $display_total);
+                ?>
                 <div class="summary-row">
                     <span>Tổng cộng:</span>
                     <span style="color: #ff4757; font-size: 20px;">
-                        <?= formatPrice($total) ?>đ
+                        <?= formatPrice($display_total) ?>đ
                     </span>
                 </div>
 
+                <!-- Hidden field để lưu điểm đã sử dụng -->
+                <input type="hidden" name="points_used" value="<?= $display_points_used ?>">
+                
                 <button type="submit" name="place_order" class="place-order-btn">
                     <i class="fas fa-shopping-bag"></i>
                     Đặt hàng ngay -
-                    <?= formatPrice($total) ?>đ
+                    <?= formatPrice($display_total) ?>đ
                 </button>
 
                 <div class="security-info">
@@ -762,15 +881,18 @@ function getImageUrl($image_path, $product_name = 'Product') {
                     }
 
                     // Confirm trước khi đặt hàng
-                    if (!confirm('Bạn có chắc chắn muốn đặt hàng với tổng tiền <?= formatPrice($total) ?>đ?')) {
+                    const totalAmount = '<?= formatPrice($total) ?>';
+                    if (!confirm('Bạn có chắc chắn muốn đặt hàng với tổng tiền ' + totalAmount + 'đ?')) {
                         e.preventDefault();
                         return false;
                     }
 
                     // Show loading
                     const submitBtn = form.querySelector('.place-order-btn');
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-                    submitBtn.disabled = true;
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+                        submitBtn.disabled = true;
+                    }
                 });
             }
 
@@ -783,6 +905,30 @@ function getImageUrl($image_path, $product_name = 'Product') {
                     // Limit to 11 digits
                     value = value.substring(0, 11);
                     this.value = value;
+                });
+            }
+
+            // Xử lý nhập số điểm
+            const pointsInput = document.getElementById('points_to_use');
+            const pointsUsedHidden = document.querySelector('input[name="points_used"]');
+            
+            if (pointsInput) {
+                pointsInput.addEventListener('input', function() {
+                    const points = parseInt(this.value) || 0;
+                    const maxPoints = parseInt(this.max) || 0;
+                    
+                    if (points > maxPoints) {
+                        this.value = maxPoints;
+                    }
+                    
+                    if (points < 0) {
+                        this.value = 0;
+                    }
+                    
+                    // Cập nhật hidden field
+                    if (pointsUsedHidden) {
+                        pointsUsedHidden.value = this.value;
+                    }
                 });
             }
         });

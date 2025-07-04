@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_product'])) {
     $san_pham_noi_bat = isset($_POST['san_pham_noi_bat']) ? 1 : 0;
     $is_flash_sale = isset($_POST['is_flash_sale']) ? 1 : 0;
     $stmt = $conn->prepare("UPDATE san_pham_thuoc SET ten_san_pham=?, ma_danh_muc=?, ma_nha_san_xuat=?, mo_ta=?, gia_ban=?, gia_khuyen_mai=?, so_luong_ton_kho=?, san_pham_noi_bat=?, is_flash_sale=? WHERE ma_san_pham=?");
-    $stmt->bind_param("siisdiiii", $ten_san_pham, $ma_danh_muc, $ma_nha_san_xuat, $mo_ta, $gia_ban, $gia_khuyen_mai, $so_luong_ton_kho, $san_pham_noi_bat, $is_flash_sale, $ma_san_pham);
+    $stmt->bind_param("siisdiiiii", $ten_san_pham, $ma_danh_muc, $ma_nha_san_xuat, $mo_ta, $gia_ban, $gia_khuyen_mai, $so_luong_ton_kho, $san_pham_noi_bat, $is_flash_sale, $ma_san_pham);
     $stmt->execute();
     // Lấy thông tin ảnh cũ
     $res = $conn->query("SELECT * FROM hinh_anh_san_pham WHERE ma_san_pham=".(int)$ma_san_pham." AND la_hinh_chinh=1 LIMIT 1");
@@ -116,19 +116,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_product'])) {
 
 // Lấy danh sách sản phẩm
 $search = isset($_GET['search']) ? $_GET['search'] : '';
+$filter = isset($_GET['filter']) ? $_GET['filter'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-$where_clause = "";
+$where_clauses = [];
 $params = [];
 $types = "";
 
 if ($search) {
-    $where_clause = "WHERE sp.ten_san_pham LIKE ?";
+    $where_clauses[] = "sp.ten_san_pham LIKE ?";
     $params[] = "%$search%";
-    $types = "s";
+    $types .= "s";
 }
+if ($filter === 'low_stock') {
+    $where_clauses[] = "sp.so_luong_ton_kho <= sp.muc_ton_kho_toi_thieu AND sp.trang_thai_hoat_dong = 1";
+}
+$where_clause = count($where_clauses) ? ("WHERE " . implode(" AND ", $where_clauses)) : "";
 
 // Đếm tổng sản phẩm
 $count_sql = "SELECT COUNT(*) as total FROM san_pham_thuoc sp 
@@ -501,21 +506,7 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
 </head>
 <body>
     <div class="admin-wrapper">
-        <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-pills"></i> VitaMeds Admin</h3>
-                <p><?php echo htmlspecialchars($_SESSION['admin_name']); ?></p>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="products.php" style="background: rgba(255, 255, 255, 0.1);"><i class="fas fa-pills"></i> Quản lý sản phẩm</a></li>
-                <li><a href="orders.php"><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</a></li>
-                <li><a href="customers.php"><i class="fas fa-users"></i> Quản lý khách hàng</a></li>
-                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
-            </ul>
-        </nav>
+        <?php include '../includes/sidebar-admin.php'; ?>
 
         <!-- Main Content -->
         <div class="main-content">

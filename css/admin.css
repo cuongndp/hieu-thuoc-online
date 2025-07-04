@@ -42,9 +42,11 @@ body {
 }
 
 .sidebar-header p {
-    font-size: 12px;
+    font-size: 14px;
     color: #bdc3c7;
-    opacity: 0.8;
+    margin-top: 4px;
+    margin-bottom: 0;
+    text-align: center;
 }
 
 .sidebar-menu {
@@ -647,4 +649,34 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.filter-form-responsive input,
+.filter-form-responsive select {
+    min-width: 180px !important;
+    margin-bottom: 0 !important;
+    height: 44px !important;
+    padding: 0 18px !important;
+    font-size: 16px !important;
+    border: 1.5px solid #e0e6ed !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.06) !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.filter-form-responsive input:focus,
+.filter-form-responsive select:focus {
+    border-color: #3498db !important;
+    outline: none !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 2px #d6eaff, 0 2px 8px rgba(44,62,80,0.10) !important;
+}
+
+.filter-form-responsive .btn {
+    height: 44px !important;
+    font-size: 16px !important;
+    padding: 0 22px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.06) !important;
+    border: none !important;
 }

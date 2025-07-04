@@ -360,21 +360,7 @@ $total_stats = $conn->query("SELECT COUNT(*) as total FROM nguoi_dung WHERE vai_
 </head>
 <body>
     <div class="admin-wrapper">
-        <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-pills"></i> VitaMeds Admin</h3>
-                <p><?php echo htmlspecialchars($_SESSION['admin_name']); ?></p>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="products.php"><i class="fas fa-pills"></i> Quản lý sản phẩm</a></li>
-                <li><a href="orders.php"><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</a></li>
-                <li><a href="customers.php" style="background: rgba(255, 255, 255, 0.1);"><i class="fas fa-users"></i> Quản lý khách hàng</a></li>
-                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
-            </ul>
-        </nav>
+        <?php include '../includes/sidebar-admin.php'; ?>
 
         <!-- Main Content -->
         <div class="main-content">

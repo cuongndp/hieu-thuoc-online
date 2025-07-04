@@ -18,6 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $update_stmt->bind_param("si", $new_status, $order_id);
     
     if ($update_stmt->execute()) {
+        // Nếu chuyển sang 'da_giao', kiểm tra phương thức thanh toán
+        if ($new_status === 'da_giao') {
+            $pm_stmt = $conn->prepare("SELECT phuong_thuc_thanh_toan FROM don_hang WHERE ma_don_hang = ?");
+            $pm_stmt->bind_param("i", $order_id);
+            $pm_stmt->execute();
+            $pm_stmt->bind_result($phuong_thuc);
+            $pm_stmt->fetch();
+            $pm_stmt->close();
+            if ($phuong_thuc === 'tien_mat') {
+                $pay_stmt = $conn->prepare("UPDATE don_hang SET trang_thai_thanh_toan = 'da_thanh_toan' WHERE ma_don_hang = ?");
+                $pay_stmt->bind_param("i", $order_id);
+                $pay_stmt->execute();
+                $pay_stmt->close();
+            }
+        }
         $message = "Cập nhật trạng thái đơn hàng thành công!";
     } else {
         $message = "Lỗi khi cập nhật trạng thái đơn hàng!";
@@ -29,6 +44,7 @@ $search = isset($_GET['search']) ? $_GET['search'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+$payment_status = isset($_GET['payment_status']) ? $_GET['payment_status'] : '';
 
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 15;
@@ -61,6 +77,12 @@ if ($date_from) {
 if ($date_to) {
     $where_conditions[] = "DATE(dh.ngay_tao) <= ?";
     $params[] = $date_to;
+    $types .= "s";
+}
+
+if ($payment_status) {
+    $where_conditions[] = "dh.trang_thai_thanh_toan = ?";
+    $params[] = $payment_status;
     $types .= "s";
 }
 
@@ -507,25 +529,44 @@ try {
                 grid-template-columns: 1fr;
             }
         }
+
+        .filter-form-responsive {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .filter-form-responsive input,
+        .filter-form-responsive select {
+            min-width: 180px;
+            margin-bottom: 0;
+        }
+        .filter-form-responsive .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        @media (max-width: 900px) {
+            .filter-form-responsive input,
+            .filter-form-responsive select {
+                min-width: 120px;
+                flex: 1 1 100%;
+            }
+            .filter-form-responsive {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-form-responsive .filter-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="admin-wrapper">
-        <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-pills"></i> VitaMeds Admin</h3>
-                <p><?php echo htmlspecialchars($_SESSION['admin_name']); ?></p>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="products.php"><i class="fas fa-pills"></i> Quản lý sản phẩm</a></li>
-                <li><a href="orders.php" style="background: rgba(255, 255, 255, 0.1);"><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</a></li>
-                <li><a href="customers.php"><i class="fas fa-users"></i> Quản lý khách hàng</a></li>
-                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
-            </ul>
-        </nav>
+        <?php include '../includes/sidebar-admin.php'; ?>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -594,49 +635,28 @@ try {
 
             <!-- Filters -->
             <div class="filters">
-                <form method="GET">
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label>Tìm kiếm:</label>
-                            <input type="text" name="search" placeholder="Mã đơn, tên khách hàng, email..." value="<?php echo htmlspecialchars($search); ?>">
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label>Trạng thái:</label>
-                            <select name="status">
-                                <option value="">Tất cả trạng thái</option>
-                                <option value="cho_xac_nhan" <?php echo $status_filter === 'cho_xac_nhan' ? 'selected' : ''; ?>>Chờ xác nhận</option>
-                                <option value="da_xac_nhan" <?php echo $status_filter === 'da_xac_nhan' ? 'selected' : ''; ?>>Đã xác nhận</option>
-                                <option value="dang_xu_ly" <?php echo $status_filter === 'dang_xu_ly' ? 'selected' : ''; ?>>Đang xử lý</option>
-                                <option value="dang_giao" <?php echo $status_filter === 'dang_giao' ? 'selected' : ''; ?>>Đang giao</option>
-                                <option value="da_giao" <?php echo $status_filter === 'da_giao' ? 'selected' : ''; ?>>Đã giao</option>
-                                <option value="da_huy" <?php echo $status_filter === 'da_huy' ? 'selected' : ''; ?>>Đã hủy</option>
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label>Từ ngày:</label>
-                            <input type="date" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>">
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label>Đến ngày:</label>
-                            <input type="date" name="date_to" value="<?php echo htmlspecialchars($date_to); ?>">
-                        </div>
-                    </div>
-                    
+                <form method="GET" class="filter-form-responsive">
+                    <input type="text" name="search" placeholder="Mã đơn, tên khách hàng, email..." value="<?php echo htmlspecialchars($search); ?>">
+                    <select name="status">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="cho_xac_nhan" <?php if($status_filter === 'cho_xac_nhan') echo 'selected'; ?>>Chờ xác nhận</option>
+                        <option value="da_xac_nhan" <?php if($status_filter === 'da_xac_nhan') echo 'selected'; ?>>Đã xác nhận</option>
+                        <option value="dang_xu_ly" <?php if($status_filter === 'dang_xu_ly') echo 'selected'; ?>>Đang xử lý</option>
+                        <option value="dang_giao" <?php if($status_filter === 'dang_giao') echo 'selected'; ?>>Đang giao</option>
+                        <option value="da_giao" <?php if($status_filter === 'da_giao') echo 'selected'; ?>>Đã giao</option>
+                        <option value="da_huy" <?php if($status_filter === 'da_huy') echo 'selected'; ?>>Đã hủy</option>
+                    </select>
+                    <select name="payment_status">
+                        <option value="">Tất cả trạng thái thanh toán</option>
+                        <option value="chua_thanh_toan" <?php if($payment_status === 'chua_thanh_toan') echo 'selected'; ?>>Chưa thanh toán</option>
+                        <option value="da_thanh_toan" <?php if($payment_status === 'da_thanh_toan') echo 'selected'; ?>>Đã thanh toán</option>
+                    </select>
+                    <input type="date" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>">
+                    <input type="date" name="date_to" value="<?php echo htmlspecialchars($date_to); ?>">
                     <div class="filter-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Tìm kiếm
-                        </button>
-                        
-                        <a href="orders.php" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Xóa bộ lọc
-                        </a>
-                        
-                        <a href="?status=cho_xac_nhan" class="btn btn-warning">
-                            <i class="fas fa-clock"></i> Chờ xác nhận (<?php echo $stats['cho_xac_nhan']; ?>)
-                        </a>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Tìm kiếm</button>
+                        <a href="orders.php" class="btn btn-secondary"><i class="fas fa-times"></i> Xóa bộ lọc</a>
+                        <a href="?status=cho_xac_nhan" class="btn btn-warning"><i class="fas fa-clock"></i> Chờ xác nhận (<?php echo $stats['cho_xac_nhan']; ?>)</a>
                     </div>
                 </form>
             </div>

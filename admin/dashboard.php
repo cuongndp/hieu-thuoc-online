@@ -74,6 +74,12 @@ try {
     error_log("Dashboard error: " . $e->getMessage());
     $recent_orders = [];
 }
+
+$completed_orders_result = $conn->query("SELECT COUNT(*) as count FROM don_hang WHERE trang_thai_thanh_toan = 'da_thanh_toan' AND trang_thai_don_hang = 'da_giao'");
+$completed_orders = 0;
+if ($completed_orders_result) {
+    $completed_orders = $completed_orders_result->fetch_assoc()['count'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -122,10 +128,10 @@ try {
             margin-bottom: 5px;
         }
 
-        .sidebar-header p {
-            font-size: 12px;
-            color: #bdc3c7;
-        }
+        /*        .sidebar-header p {
+                    font-size: 12px;
+                    color: #bdc3c7;
+                }*/
 
         .sidebar-menu {
             list-style: none;
@@ -400,45 +406,7 @@ try {
 <body>
     <div class="admin-wrapper">
         <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-pills"></i> VitaMeds Admin</h3>
-                <p><?php echo htmlspecialchars($_SESSION['admin_name'] ?? 'Admin'); ?></p>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li class="active">
-                    <a href="dashboard.php">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a href="products.php">
-                        <i class="fas fa-pills"></i> Quản lý sản phẩm
-                    </a>
-                </li>
-                <li>
-                    <a href="orders.php">
-                        <i class="fas fa-shopping-cart"></i> Quản lý đơn hàng
-                    </a>
-                </li>
-                <li>
-                    <a href="customers.php">
-                        <i class="fas fa-users"></i> Quản lý khách hàng
-                    </a>
-                </li>
-                <li>
-                    <a href="revenue.php">
-                        <i class="fas fa-chart-line"></i> Thống kê doanh thu
-                    </a>
-                </li>
-                <li>
-                    <a href="logout.php">
-                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                    </a>
-                </li>
-            </ul>
-        </nav>
+        <?php include '../includes/sidebar-admin.php'; ?>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -531,7 +499,7 @@ try {
                     <div class="card-body">
                         <div style="text-align: center; padding: 20px;">
                             <h2 style="color: #3498db; margin-bottom: 10px;">
-                                <?php echo number_format(($total_revenue / max($total_orders, 1))); ?>đ
+                                <?php echo number_format(($total_revenue / max($completed_orders, 1))); ?>đ
                             </h2>
                             <p style="color: #7f8c8d;">Giá trị đơn hàng trung bình</p>
                         </div>

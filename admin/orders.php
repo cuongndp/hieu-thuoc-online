@@ -658,6 +658,7 @@ try {
                                 <th>Tổng tiền</th>
                                 <th>Địa chỉ giao</th>
                                 <th>Trạng thái</th>
+                                <th>Trạng thái thanh toán</th>
                                 <th>Thao tác</th>
                             </tr>
                         </thead>
@@ -718,6 +719,13 @@ try {
                                             <option value="da_huy" <?php echo $order['trang_thai_don_hang'] === 'da_huy' ? 'selected' : ''; ?>>Đã hủy</option>
                                         </select>
                                     </form>
+                                </td>
+                                <td>
+                                    <?php if($order['trang_thai_thanh_toan'] === 'da_thanh_toan') {
+                                        echo '<span style="color:#27ae60;font-weight:bold;">Đã thanh toán</span>';
+                                    } else {
+                                        echo '<span style="color:#e67e22;font-weight:bold;">Chưa thanh toán</span>';
+                                    } ?>
                                 </td>
                                 <td>
                                     <a href="order_detail.php?id=<?php echo $order['ma_don_hang']; ?>" class="btn btn-info btn-sm">

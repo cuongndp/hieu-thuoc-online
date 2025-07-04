@@ -280,6 +280,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 throw new Exception("Lỗi khi lưu chi tiết đơn hàng: " . $stmt->error);
             }
             $stmt->close();
+
+            // Trừ tồn kho sản phẩm
+            $update_stock = $conn->prepare("UPDATE san_pham_thuoc SET so_luong_ton_kho = so_luong_ton_kho - ? WHERE ma_san_pham = ?");
+            $update_stock->bind_param("ii", $item['so_luong'], $item['ma_san_pham']);
+            $update_stock->execute();
+            $update_stock->close();
         }
 
         // 4. Xử lý điểm tích lũy và sử dụng điểm

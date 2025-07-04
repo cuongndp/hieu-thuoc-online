@@ -45,9 +45,11 @@ $addresses = $addresses_stmt->get_result();
 // Lấy đơn hàng gần nhất
 $orders_stmt = $conn->prepare("
     SELECT dh.so_don_hang, dh.ngay_tao, dh.tong_tien_thanh_toan, dh.trang_thai_don_hang,
-           COUNT(ct.ma_chi_tiet) as so_san_pham
+           COUNT(ct.ma_chi_tiet) as so_san_pham,
+           dc.dia_chi_chi_tiet, dc.phuong_xa, dc.quan_huyen, dc.tinh_thanh
     FROM don_hang dh
     LEFT JOIN chi_tiet_don_hang ct ON dh.ma_don_hang = ct.ma_don_hang
+    LEFT JOIN dia_chi dc ON dh.ma_dia_chi_giao_hang = dc.ma_dia_chi
     WHERE dh.ma_nguoi_dung = ?
     GROUP BY dh.ma_don_hang
     ORDER BY dh.ngay_tao DESC
@@ -56,6 +58,22 @@ $orders_stmt = $conn->prepare("
 $orders_stmt->bind_param("i", $customer_id);
 $orders_stmt->execute();
 $orders = $orders_stmt->get_result();
+
+// Xử lý cập nhật trạng thái đơn hàng
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status'])) {
+    $so_don_hang = $_POST['so_don_hang'];
+    $trang_thai_moi = $_POST['trang_thai_don_hang'];
+    // Chỉ cho phép các trạng thái hợp lệ
+    $valid_status = ['cho_xac_nhan','da_xac_nhan','dang_xu_ly','dang_giao','da_giao','da_huy'];
+    if (in_array($trang_thai_moi, $valid_status)) {
+        $update_stmt = $conn->prepare("UPDATE don_hang SET trang_thai_don_hang = ? WHERE so_don_hang = ?");
+        $update_stmt->bind_param("ss", $trang_thai_moi, $so_don_hang);
+        $update_stmt->execute();
+        // Reload lại trang để cập nhật
+        header("Location: customer_detail.php?id=$customer_id");
+        exit;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -362,6 +380,8 @@ $orders = $orders_stmt->get_result();
                         <th>Số sản phẩm</th>
                         <th>Tổng tiền</th>
                         <th>Trạng thái</th>
+                        <th>Địa chỉ giao hàng</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -372,22 +392,38 @@ $orders = $orders_stmt->get_result();
                         <td><?php echo $order['so_san_pham']; ?> sản phẩm</td>
                         <td><strong><?php echo number_format($order['tong_tien_thanh_toan']); ?>đ</strong></td>
                         <td>
+                            <span class="status-badge" style="background: #d1f2eb; color: #00695c;">
+                                <?php echo ucfirst(str_replace('_', ' ', $order['trang_thai_don_hang'])); ?>
+                            </span>
+                        </td>
+                        <td>
                             <?php
-                            $status_class = 'status-' . $order['trang_thai_don_hang'];
-                            $status_text = '';
-                            switch($order['trang_thai_don_hang']) {
-                                case 'cho_xac_nhan': $status_text = 'Chờ xác nhận'; break;
-                                case 'da_xac_nhan': $status_text = 'Đã xác nhận'; break;
-                                case 'dang_xu_ly': $status_text = 'Đang xử lý'; break;
-                                case 'dang_giao': $status_text = 'Đang giao'; break;
-                                case 'da_giao': $status_text = 'Đã giao'; break;
-                                case 'da_huy': $status_text = 'Đã hủy'; break;
-                                default: $status_text = $order['trang_thai_don_hang'];
+                            echo htmlspecialchars($order['dia_chi_chi_tiet']);
+                            if ($order['phuong_xa'] || $order['quan_huyen'] || $order['tinh_thanh']) {
+                                echo ', ' . htmlspecialchars($order['phuong_xa'] . ', ' . $order['quan_huyen'] . ', ' . $order['tinh_thanh']);
                             }
                             ?>
-                            <span class="status-badge <?php echo $status_class; ?>">
-                                <?php echo $status_text; ?>
-                            </span>
+                        </td>
+                        <td>
+                            <form method="POST" style="display:inline-block; min-width:120px;">
+                                <input type="hidden" name="update_order_status" value="1">
+                                <input type="hidden" name="so_don_hang" value="<?php echo htmlspecialchars($order['so_don_hang']); ?>">
+                                <select name="trang_thai_don_hang" style="padding:3px 8px; border-radius:6px;">
+                                    <?php
+                                    $status_options = [
+                                        'cho_xac_nhan' => 'Chờ xác nhận',
+                                        'da_xac_nhan' => 'Đã xác nhận',
+                                        'dang_xu_ly' => 'Đang xử lý',
+                                        'dang_giao' => 'Đang giao',
+                                        'da_giao' => 'Đã giao',
+                                        'da_huy' => 'Đã hủy',
+                                    ];
+                                    foreach ($status_options as $key => $label): ?>
+                                        <option value="<?php echo $key; ?>" <?php if($order['trang_thai_don_hang']==$key) echo 'selected'; ?>><?php echo $label; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="submit" style="padding:2px 8px; border-radius:6px; background:#3498db; color:white; border:none;">Lưu</button>
+                            </form>
                         </td>
                     </tr>
                     <?php endwhile; ?>

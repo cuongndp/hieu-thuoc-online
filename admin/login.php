@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (!empty($email) && !empty($password)) {
         try {
-            $stmt = $conn->prepare("SELECT ma_nguoi_dung, email, mat_khau_ma_hoa, ho_ten, vai_tro FROM nguoi_dung WHERE email = ? AND vai_tro = 'quan_tri'");
+            $stmt = $conn->prepare("SELECT ma_nguoi_dung, email, mat_khau_ma_hoa, ho_ten, vai_tro FROM nguoi_dung WHERE email = ? AND vai_tro IN ('quan_tri', 'nhan_vien', 'quan_ly')");
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_id'] = $admin['ma_nguoi_dung'];
                     $_SESSION['admin_name'] = $admin['ho_ten'];
                     $_SESSION['admin_email'] = $admin['email'];
+                    $_SESSION['user_role'] = $admin['vai_tro']; // Lưu vai trò vào session
                     
                     header('Location: dashboard.php');
                     exit;
@@ -249,11 +250,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="password">
-                    <i class="fas fa-lock"></i> Mật khẩu
-                </label>
+                <label for="mat_khau">Mật khẩu:</label>
                 <input type="password" id="password" name="password" required>
-                <i class="fas fa-key"></i>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <input type="checkbox" onclick="togglePassword()"> Hiện mật khẩu
             </div>
 
             <button type="submit" class="btn-login">
@@ -283,6 +284,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 document.querySelector('form').submit();
             }
         });
+
+        function togglePassword() {
+            var x = document.getElementById("password");
+            x.type = (x.type === "password") ? "text" : "password";
+        }
     </script>
 </body>
 </html>

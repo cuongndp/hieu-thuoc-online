@@ -8,6 +8,10 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
     exit;
 }
 
+// Lấy tháng/năm từ GET, mặc định là tháng/năm hiện tại
+$month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+$year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+
 // Lấy thống kê tổng quan với xử lý lỗi
 $total_orders = 0;
 $total_revenue = 0;
@@ -24,7 +28,7 @@ try {
     }
     
     // Tổng doanh thu
-    $result = $conn->query("SELECT SUM(tong_tien_thanh_toan) as total FROM don_hang WHERE trang_thai_thanh_toan = 'da_thanh_toan'");
+    $result = $conn->query("SELECT SUM(tong_tien_thanh_toan) as total FROM don_hang WHERE trang_thai_thanh_toan = 'da_thanh_toan' AND trang_thai_don_hang = 'da_giao'");
     if ($result) {
         $total_revenue = $result->fetch_assoc()['total'] ?? 0;
     }
@@ -424,6 +428,11 @@ try {
                     </a>
                 </li>
                 <li>
+                    <a href="revenue.php">
+                        <i class="fas fa-chart-line"></i> Thống kê doanh thu
+                    </a>
+                </li>
+                <li>
                     <a href="logout.php">
                         <i class="fas fa-sign-out-alt"></i> Đăng xuất
                     </a>
@@ -558,7 +567,7 @@ try {
                                     <th>Tổng tiền</th>
                                     <th>Trạng thái</th>
                                     <th>Ngày tạo</th>
-                                    <th>Thao tác</th>
+                                    <th>Chi tiết</th>
                                 </tr>
                             </thead>
                             <tbody>

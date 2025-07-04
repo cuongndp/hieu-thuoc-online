@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../config/database.php';
+include 'includes/permissions.php';
 
 // Kiểm tra đăng nhập admin
 if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
@@ -10,6 +11,11 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
 
 // Xử lý thêm sản phẩm
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
+    if (!checkPermission('products_add')) {
+        $_SESSION['error_message'] = 'Bạn không có quyền thêm sản phẩm!';
+        header('Location: products.php');
+        exit;
+    }
     $ten_san_pham = $_POST['ten_san_pham'];
     $ma_danh_muc = $_POST['ma_danh_muc'];
     $ma_nha_san_xuat = $_POST['ma_nha_san_xuat'];
@@ -18,15 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
     $gia_khuyen_mai = !empty($_POST['gia_khuyen_mai']) ? $_POST['gia_khuyen_mai'] : null;
     $so_luong_ton_kho = $_POST['so_luong_ton_kho'];
     $san_pham_noi_bat = isset($_POST['san_pham_noi_bat']) ? 1 : 0;
+    $is_flash_sale = isset($_POST['is_flash_sale']) ? 1 : 0;
     
-    $stmt = $conn->prepare("
-        INSERT INTO san_pham_thuoc 
-        (ten_san_pham, ma_danh_muc, ma_nha_san_xuat, mo_ta, gia_ban, gia_khuyen_mai, so_luong_ton_kho, san_pham_noi_bat) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-    $stmt->bind_param("siisdiii", $ten_san_pham, $ma_danh_muc, $ma_nha_san_xuat, $mo_ta, $gia_ban, $gia_khuyen_mai, $so_luong_ton_kho, $san_pham_noi_bat);
+    $stmt = $conn->prepare("INSERT INTO san_pham_thuoc (ten_san_pham, ma_danh_muc, ma_nha_san_xuat, mo_ta, gia_ban, gia_khuyen_mai, so_luong_ton_kho, san_pham_noi_bat, is_flash_sale) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("siisdiiii", $ten_san_pham, $ma_danh_muc, $ma_nha_san_xuat, $mo_ta, $gia_ban, $gia_khuyen_mai, $so_luong_ton_kho, $san_pham_noi_bat, $is_flash_sale);
     
     if ($stmt->execute()) {
+        $ma_san_pham = $conn->insert_id;
+        // Xử lý upload 1 ảnh
+        if (!empty($_FILES['hinh_anh']['name'][0])) {
+            $img_name = basename($_FILES['hinh_anh']['name'][0]);
+            $target = '../images/products/' . $img_name;
+            if (move_uploaded_file($_FILES['hinh_anh']['tmp_name'][0], $target)) {
+                $duong_dan = 'images/products/' . $img_name;
+                $mo_ta_hinh_anh = $ten_san_pham;
+                $la_hinh_chinh = 1;
+                $stmt_img = $conn->prepare("INSERT INTO hinh_anh_san_pham (ma_san_pham, duong_dan_hinh_anh, mo_ta_hinh_anh, la_hinh_chinh) VALUES (?, ?, ?, ?)");
+                $stmt_img->bind_param("issi", $ma_san_pham, $duong_dan, $mo_ta_hinh_anh, $la_hinh_chinh);
+                $stmt_img->execute();
+            }
+        }
         $message = "Thêm sản phẩm thành công!";
     } else {
         $message = "Lỗi khi thêm sản phẩm!";
@@ -35,6 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
 
 // Xử lý xóa sản phẩm
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
+    if (!checkPermission('products_delete')) {
+        $_SESSION['error_message'] = 'Bạn không có quyền xóa sản phẩm!';
+        header('Location: products.php');
+        exit;
+    }
     $ma_san_pham = $_GET['delete'];
     $stmt = $conn->prepare("UPDATE san_pham_thuoc SET trang_thai_hoat_dong = 0 WHERE ma_san_pham = ?");
     $stmt->bind_param("i", $ma_san_pham);
@@ -44,6 +66,52 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     } else {
         $message = "Lỗi khi xóa sản phẩm!";
     }
+}
+
+// Xử lý cập nhật sản phẩm
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_product'])) {
+    if (!checkPermission('products_edit')) {
+        $_SESSION['error_message'] = 'Bạn không có quyền sửa sản phẩm!';
+        header('Location: products.php');
+        exit;
+    }
+    $ma_san_pham = $_POST['ma_san_pham'];
+    $ten_san_pham = $_POST['ten_san_pham'];
+    $ma_danh_muc = $_POST['ma_danh_muc'];
+    $ma_nha_san_xuat = $_POST['ma_nha_san_xuat'];
+    $mo_ta = $_POST['mo_ta'];
+    $gia_ban = $_POST['gia_ban'];
+    $gia_khuyen_mai = !empty($_POST['gia_khuyen_mai']) ? $_POST['gia_khuyen_mai'] : null;
+    $so_luong_ton_kho = $_POST['so_luong_ton_kho'];
+    $san_pham_noi_bat = isset($_POST['san_pham_noi_bat']) ? 1 : 0;
+    $is_flash_sale = isset($_POST['is_flash_sale']) ? 1 : 0;
+    $stmt = $conn->prepare("UPDATE san_pham_thuoc SET ten_san_pham=?, ma_danh_muc=?, ma_nha_san_xuat=?, mo_ta=?, gia_ban=?, gia_khuyen_mai=?, so_luong_ton_kho=?, san_pham_noi_bat=?, is_flash_sale=? WHERE ma_san_pham=?");
+    $stmt->bind_param("siisdiiii", $ten_san_pham, $ma_danh_muc, $ma_nha_san_xuat, $mo_ta, $gia_ban, $gia_khuyen_mai, $so_luong_ton_kho, $san_pham_noi_bat, $is_flash_sale, $ma_san_pham);
+    $stmt->execute();
+    // Lấy thông tin ảnh cũ
+    $res = $conn->query("SELECT * FROM hinh_anh_san_pham WHERE ma_san_pham=".(int)$ma_san_pham." AND la_hinh_chinh=1 LIMIT 1");
+    $old_img = $res->fetch_assoc();
+    if (!empty($_FILES['hinh_anh']['name'][0])) {
+        // Xóa file ảnh cũ
+        if ($old_img && file_exists('../'.$old_img['duong_dan_hinh_anh'])) {
+            unlink('../'.$old_img['duong_dan_hinh_anh']);
+        }
+        // Xóa bản ghi ảnh cũ
+        if ($old_img) {
+            $conn->query("DELETE FROM hinh_anh_san_pham WHERE ma_hinh_anh=".(int)$old_img['ma_hinh_anh']);
+        }
+        // Lưu file ảnh mới với tên giống ảnh cũ (nếu có), hoặc tên mới nếu chưa từng có ảnh
+        $new_name = $old_img ? basename($old_img['duong_dan_hinh_anh']) : basename($_FILES['hinh_anh']['name'][0]);
+        $target = '../images/products/' . $new_name;
+        move_uploaded_file($_FILES['hinh_anh']['tmp_name'][0], $target);
+        $duong_dan = 'images/products/' . $new_name;
+        $mo_ta_hinh_anh = $ten_san_pham;
+        $la_hinh_chinh = 1;
+        $stmt_img = $conn->prepare("INSERT INTO hinh_anh_san_pham (ma_san_pham, duong_dan_hinh_anh, mo_ta_hinh_anh, la_hinh_chinh) VALUES (?, ?, ?, ?)");
+        $stmt_img->bind_param("issi", $ma_san_pham, $duong_dan, $mo_ta_hinh_anh, $la_hinh_chinh);
+        $stmt_img->execute();
+    }
+    $message = "Cập nhật sản phẩm thành công!";
 }
 
 // Lấy danh sách sản phẩm
@@ -453,9 +521,11 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
         <div class="main-content">
             <div class="page-header">
                 <h1><i class="fas fa-pills"></i> Quản lý Sản phẩm</h1>
+                <?php if (checkPermission('products_add')): ?>
                 <button class="btn btn-primary" onclick="openModal()">
                     <i class="fas fa-plus"></i> Thêm sản phẩm
                 </button>
+                <?php endif; ?>
             </div>
 
             <?php if (isset($message)): ?>
@@ -488,7 +558,6 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Tên sản phẩm</th>
                                 <th>Danh mục</th>
                                 <th>Nhà sản xuất</th>
@@ -496,13 +565,12 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                                 <th>Tồn kho</th>
                                 <th>Nổi bật</th>
                                 <th>Trạng thái</th>
-                                <th>Thao tác</th>
+                                <th>Chi tiết</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php while ($product = $products->fetch_assoc()): ?>
                             <tr>
-                                <td><?php echo $product['ma_san_pham']; ?></td>
                                 <td>
                                     <strong><?php echo htmlspecialchars($product['ten_san_pham']); ?></strong>
                                     <?php if ($product['gia_khuyen_mai']): ?>
@@ -532,6 +600,35 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                                         <?php echo $product['trang_thai_hoat_dong'] ? 'Hoạt động' : 'Không hoạt động'; ?>
                                     </span>
                                 </td>
+                                <?php if (checkPermission('products_edit')): ?>
+                                <td>
+                                    <?php
+                                    $img_sql = "SELECT duong_dan_hinh_anh FROM hinh_anh_san_pham WHERE ma_san_pham = ? AND la_hinh_chinh = 1 LIMIT 1";
+                                    $img_stmt = $conn->prepare($img_sql);
+                                    $img_stmt->bind_param("i", $product['ma_san_pham']);
+                                    $img_stmt->execute();
+                                    $img_result = $img_stmt->get_result();
+                                    $img_row = $img_result->fetch_assoc();
+                                    $img_url = $img_row ? $img_row['duong_dan_hinh_anh'] : '';
+                                    ?>
+                                    <button class="btn btn-primary btn-edit" 
+                                        data-id="<?php echo $product['ma_san_pham']; ?>"
+                                        data-ten="<?php echo htmlspecialchars($product['ten_san_pham']); ?>"
+                                        data-danhmuc="<?php echo $product['ma_danh_muc']; ?>"
+                                        data-nhasx="<?php echo $product['ma_nha_san_xuat']; ?>"
+                                        data-mota="<?php echo htmlspecialchars($product['mo_ta']); ?>"
+                                        data-giaban="<?php echo $product['gia_ban']; ?>"
+                                        data-giakm="<?php echo $product['gia_khuyen_mai']; ?>"
+                                        data-tonkho="<?php echo $product['so_luong_ton_kho']; ?>"
+                                        data-noibat="<?php echo $product['san_pham_noi_bat']; ?>"
+                                        data-flashsale="<?php echo $product['is_flash_sale']; ?>"
+                                        data-img="<?php echo htmlspecialchars($img_url); ?>"
+                                        onclick="openEditModal(this)">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </button>
+                                </td>
+                                <?php endif; ?>
+                                <?php if (checkPermission('products_delete')): ?>
                                 <td>
                                     <a href="?delete=<?php echo $product['ma_san_pham']; ?>" 
                                        class="btn btn-danger" 
@@ -539,6 +636,7 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 </td>
+                                <?php endif; ?>
                             </tr>
                             <?php endwhile; ?>
                         </tbody>
@@ -580,7 +678,7 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="add_product" value="1">
                     
                     <div class="form-group">
@@ -643,12 +741,112 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                         </label>
                     </div>
                     
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="is_flash_sale" value="1">
+                            Flash Sale
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Hình ảnh sản phẩm *</label>
+                        <input type="file" name="hinh_anh[]" accept="image/*" required>
+                        <small>Chỉ chọn 1 ảnh, ảnh này sẽ là ảnh chính</small>
+                    </div>
+                    
                     <div style="text-align: right; padding-top: 20px; border-top: 1px solid #ecf0f1;">
                         <button type="button" onclick="closeModal()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 6px; margin-right: 10px; cursor: pointer;">
                             Hủy
                         </button>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Thêm sản phẩm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Cập nhật sản phẩm</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="edit_product" value="1">
+                    <input type="hidden" name="ma_san_pham" id="edit_ma_san_pham">
+                    <div class="form-group">
+                        <label>Tên sản phẩm *</label>
+                        <input type="text" name="ten_san_pham" id="edit_ten_san_pham" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Danh mục *</label>
+                            <select name="ma_danh_muc" id="edit_ma_danh_muc" required>
+                                <option value="">Chọn danh mục</option>
+                                <?php $categories2 = $conn->query("SELECT * FROM danh_muc_thuoc WHERE trang_thai_hoat_dong = 1 ORDER BY ten_danh_muc");
+                                while ($cat = $categories2->fetch_assoc()): ?>
+                                <option value="<?php echo $cat['ma_danh_muc']; ?>"><?php echo htmlspecialchars($cat['ten_danh_muc']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nhà sản xuất *</label>
+                            <select name="ma_nha_san_xuat" id="edit_ma_nha_san_xuat" required>
+                                <option value="">Chọn nhà sản xuất</option>
+                                <?php $manufacturers2 = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_dong = 1 ORDER BY ten_nha_san_xuat");
+                                while ($mfg = $manufacturers2->fetch_assoc()): ?>
+                                <option value="<?php echo $mfg['ma_nha_san_xuat']; ?>"><?php echo htmlspecialchars($mfg['ten_nha_san_xuat']); ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Giá bán *</label>
+                            <input type="number" name="gia_ban" id="edit_gia_ban" min="0" step="1000" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Giá khuyến mãi</label>
+                            <input type="number" name="gia_khuyen_mai" id="edit_gia_khuyen_mai" min="0" step="1000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Số lượng tồn kho *</label>
+                        <input type="number" name="so_luong_ton_kho" id="edit_so_luong_ton_kho" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả sản phẩm</label>
+                        <textarea name="mo_ta" id="edit_mo_ta" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="san_pham_noi_bat" id="edit_san_pham_noi_bat" value="1">
+                            Sản phẩm nổi bật
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="is_flash_sale" id="edit_is_flash_sale" value="1">
+                            Flash Sale
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Hình ảnh hiện tại</label><br>
+                        <img id="edit_current_img" src="" style="width:80px;height:80px;object-fit:cover;display:none;">
+                    </div>
+                    <div class="form-group">
+                        <label>Thay thế ảnh mới</label>
+                        <input type="file" name="hinh_anh[]" accept="image/*">
+                        <small>Nếu chọn ảnh mới, ảnh cũ sẽ bị thay thế.</small>
+                    </div>
+                    <div style="text-align: right; padding-top: 20px; border-top: 1px solid #ecf0f1;">
+                        <button type="button" onclick="closeEditModal()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 6px; margin-right: 10px; cursor: pointer;">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Lưu thay đổi
                         </button>
                     </div>
                 </form>
@@ -681,6 +879,32 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                 setTimeout(() => alert.remove(), 300);
             }
         }, 5000);
+
+        function openEditModal(btn) {
+            document.getElementById('editModal').style.display = 'flex';
+            document.getElementById('edit_ma_san_pham').value = btn.getAttribute('data-id');
+            document.getElementById('edit_ten_san_pham').value = btn.getAttribute('data-ten');
+            document.getElementById('edit_ma_danh_muc').value = btn.getAttribute('data-danhmuc');
+            document.getElementById('edit_ma_nha_san_xuat').value = btn.getAttribute('data-nhasx');
+            document.getElementById('edit_mo_ta').value = btn.getAttribute('data-mota');
+            document.getElementById('edit_gia_ban').value = btn.getAttribute('data-giaban');
+            document.getElementById('edit_gia_khuyen_mai').value = btn.getAttribute('data-giakm');
+            document.getElementById('edit_so_luong_ton_kho').value = btn.getAttribute('data-tonkho');
+            document.getElementById('edit_san_pham_noi_bat').checked = btn.getAttribute('data-noibat') == '1';
+            document.getElementById('edit_is_flash_sale').checked = btn.getAttribute('data-flashsale') == '1';
+            var img = btn.getAttribute('data-img');
+            var imgTag = document.getElementById('edit_current_img');
+            if (img) {
+                imgTag.src = '../' + img;
+                imgTag.style.display = 'inline-block';
+            } else {
+                imgTag.style.display = 'none';
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
     </script>
 </body>
 </html>

@@ -1,25 +1,47 @@
 <?php
 session_start();
 include '../config/database.php';
+include 'includes/permissions.php';
 
 // Kiểm tra đăng nhập admin
-if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in'] || $_SESSION['vai_tro'] !== 'quan_tri') {
+if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
     header('Location: login.php');
     exit;
 }
 
+// Kiểm tra quyền xem dashboard
+requirePermission('dashboard_view');
+
+// Thêm chọn tháng/năm
+$month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+$year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+
 // Lấy thống kê tổng quan
-// 1. Tổng doanh thu tháng này
+// 1. Tổng doanh thu tháng này (chỉ đơn đã giao)
 $revenue_sql = "SELECT 
-    SUM(CASE WHEN trang_thai_don_hang = 'da_giao' THEN tong_tien_thanh_toan ELSE 0 END) as doanh_thu_thuc,
+    SUM(tong_tien_thanh_toan) as doanh_thu_thuc,
+    COUNT(*) as don_thanh_cong
+    FROM don_hang 
+    WHERE trang_thai_don_hang = 'da_giao'
+    AND MONTH(ngay_tao) = ? 
+    AND YEAR(ngay_tao) = ?";
+$revenue_stmt = $conn->prepare($revenue_sql);
+$revenue_stmt->bind_param('ii', $month, $year);
+$revenue_stmt->execute();
+$revenue_data = $revenue_stmt->get_result()->fetch_assoc();
+
+// Tổng đơn hàng/thành công/chờ xử lý trong tháng
+$order_stats_sql = "SELECT 
     COUNT(*) as tong_don_hang,
     SUM(CASE WHEN trang_thai_don_hang = 'da_giao' THEN 1 ELSE 0 END) as don_thanh_cong,
     SUM(CASE WHEN trang_thai_don_hang = 'cho_xac_nhan' THEN 1 ELSE 0 END) as don_cho_xu_ly
     FROM don_hang 
-    WHERE MONTH(ngay_tao) = MONTH(CURRENT_DATE()) 
-    AND YEAR(ngay_tao) = YEAR(CURRENT_DATE())";
-$revenue_result = $conn->query($revenue_sql);
-$revenue_data = $revenue_result->fetch_assoc();
+    WHERE MONTH(ngay_tao) = ? 
+    AND YEAR(ngay_tao) = ?";
+$order_stats_stmt = $conn->prepare($order_stats_sql);
+$order_stats_stmt->bind_param('ii', $month, $year);
+$order_stats_stmt->execute();
+$order_stats = $order_stats_stmt->get_result()->fetch_assoc();
 
 // 2. Tổng sản phẩm
 $product_stats_sql = "SELECT 
@@ -377,14 +399,14 @@ $category_stats = $conn->query($category_stats_sql);
                 <p>Hệ thống quản trị</p>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="index.php" class="active">Tổng quan</a></li>
-                <li><a href="orders.php">Đơn hàng</a></li>
-                <li><a href="products.php">Sản phẩm</a></li>
-                <li><a href="categories.php">Danh mục</a></li>
-                <li><a href="customers.php">Khách hàng</a></li>
-                <li><a href="inventory.php">Kho hàng</a></li>
-                <li><a href="reports.php">Báo cáo</a></li>
-                <li><a href="settings.php">Cài đặt</a></li>
+                <li><a href="index.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li <?php echo showMenuIf('orders_view'); ?>><a href="orders.php"><i class="fas fa-shopping-cart"></i> Đơn Hàng</a></li>
+                <li <?php echo showMenuIf('products_view'); ?>><a href="products.php"><i class="fas fa-pills"></i> Sản Phẩm</a></li>
+                <li <?php echo showMenuIf('customers_view'); ?>><a href="customers.php"><i class="fas fa-users"></i> Khách Hàng</a></li>
+                <li <?php echo showMenuIf('reviews_view'); ?>><a href="reviews.php"><i class="fas fa-star"></i> Đánh Giá</a></li>
+                <li <?php echo showMenuIf('admin_users_view'); ?>><a href="admin_users.php"><i class="fas fa-user-shield"></i> Quản Lý Admin</a></li>
+                <li <?php echo showMenuIf('reports_view'); ?>><a href="reports.php"><i class="fas fa-chart-bar"></i> Báo Cáo</a></li>
+                <li <?php echo showMenuIf('settings_view'); ?>><a href="settings.php"><i class="fas fa-cog"></i> Cài Đặt</a></li>
             </ul>
         </div>
 
@@ -405,18 +427,37 @@ $category_stats = $conn->query($category_stats_sql);
             </div>
             <?php endif; ?>
 
+            <!-- Thêm form chọn tháng/năm -->
+            <form method="GET" style="margin-bottom:20px;">
+                <label>Tháng:
+                    <select name="month">
+                        <?php for($m=1;$m<=12;$m++): ?>
+                            <option value="<?php echo $m; ?>" <?php if($m==$month) echo 'selected'; ?>><?php echo $m; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </label>
+                <label>Năm:
+                    <select name="year">
+                        <?php for($y=date('Y')-3;$y<=date('Y');$y++): ?>
+                            <option value="<?php echo $y; ?>" <?php if($y==$year) echo 'selected'; ?>><?php echo $y; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </label>
+                <button type="submit">Xem thống kê</button>
+            </form>
+
             <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card primary">
-                    <h3>Doanh thu tháng này</h3>
+                    <h3>Doanh thu tháng <?php echo $month; ?>/<?php echo $year; ?></h3>
                     <div class="number"><?php echo number_format($revenue_data['doanh_thu_thuc'] ?? 0); ?>đ</div>
-                    <div class="info"><?php echo $revenue_data['don_thanh_cong'] ?? 0; ?> đơn thành công</div>
+                    <div class="info"><?php echo $revenue_data['don_thanh_cong'] ?? 0; ?> đơn đã giao</div>
                 </div>
 
                 <div class="stat-card success">
                     <h3>Tổng đơn hàng</h3>
-                    <div class="number"><?php echo $revenue_data['tong_don_hang'] ?? 0; ?></div>
-                    <div class="info"><?php echo $revenue_data['don_cho_xu_ly'] ?? 0; ?> đơn chờ xử lý</div>
+                    <div class="number"><?php echo $order_stats['tong_don_hang'] ?? 0; ?></div>
+                    <div class="info"><?php echo $order_stats['don_cho_xu_ly'] ?? 0; ?> đơn chờ xử lý</div>
                 </div>
 
                 <div class="stat-card warning">

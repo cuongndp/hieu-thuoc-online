@@ -1,5 +1,5 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
 
 // Ensure session is started
@@ -17,34 +17,50 @@ if (!$product_id) {
     exit;
 }
 
-// Xử lý add to cart
+// Xử lý add to cart - LƯU VÀO DATABASE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     if (!is_user_logged_in()) {
         header('Location: login.php');
         exit;
     }
     
+    $user_id = get_user_id();
     $product_id_post = $_POST['product_id'] ?? 0;
     $product_name = $_POST['product_name'] ?? '';
-    $product_price = $_POST['product_price'] ?? 0;
     $quantity = intval($_POST['quantity'] ?? 1);
     
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
+    if ($product_id_post > 0 && $user_id > 0) {
+        try {
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            $check_sql = "SELECT so_luong FROM gio_hang WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("ii", $user_id, $product_id_post);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                // Nếu đã có, tăng số lượng
+                $row = $result->fetch_assoc();
+                $new_quantity = $row['so_luong'] + $quantity;
+                
+                $update_sql = "UPDATE gio_hang SET so_luong = ?, ngay_cap_nhat = NOW() WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("iii", $new_quantity, $user_id, $product_id_post);
+                $update_stmt->execute();
+            } else {
+                // Nếu chưa có, thêm mới
+                $insert_sql = "INSERT INTO gio_hang (ma_nguoi_dung, ma_san_pham, so_luong, ngay_them) VALUES (?, ?, ?, NOW())";
+                $insert_stmt = $conn->prepare($insert_sql);
+                $insert_stmt->bind_param("iii", $user_id, $product_id_post, $quantity);
+                $insert_stmt->execute();
+            }
+            
+            // Set success message
+            $_SESSION['cart_message'] = "Đã thêm {$quantity} sản phẩm '{$product_name}' vào giỏ hàng!";
+        } catch (Exception $e) {
+            $_SESSION['cart_message'] = "Có lỗi xảy ra khi thêm sản phẩm!";
+        }
     }
-    
-    if (isset($_SESSION['cart'][$product_id_post])) {
-        $_SESSION['cart'][$product_id_post]['quantity'] += $quantity;
-    } else {
-        $_SESSION['cart'][$product_id_post] = [
-            'name' => $product_name,
-            'price' => $product_price,
-            'quantity' => $quantity
-        ];
-    }
-    
-    // Set success message
-    $_SESSION['cart_message'] = "Đã thêm {$quantity} sản phẩm '{$product_name}' vào giỏ hàng!";
     
     // Redirect để tránh resubmit
     header('Location: chi-tiet-san-pham.php?id=' . $product_id . '&img=' . $selected_image);
@@ -206,7 +222,7 @@ $rating_stats = get_product_rating_stats($product_id, $conn);
 $can_review = false;
 $has_reviewed = false;
                                  if (is_user_logged_in()) {
-    $user_id = $_SESSION['user_id'] ?? 0;
+    $user_id = get_user_id();
     $can_review = has_user_purchased_product($user_id, $product_id, $conn);
     $has_reviewed = has_user_reviewed_product($user_id, $product_id, 0, $conn);
 }
@@ -728,7 +744,7 @@ $has_reviewed = false;
                 </div>
                 
                 <!-- Review Button -->
-                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                    <?php if (is_user_logged_in()): ?>
                     <?php if ($can_review && !$has_reviewed): ?>
                         <a href="review.php?product_id=<?= $product_id ?>" class="review-btn">
                             <i class="fas fa-star"></i> Viết đánh giá

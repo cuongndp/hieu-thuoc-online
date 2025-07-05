@@ -1,9 +1,6 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
-
-// Ensure session is started
-ensure_session_started();
 
 // Biến thông báo
 $message = '';
@@ -42,14 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($user = $result->fetch_assoc()) {
                 if (password_verify($password, $user['mat_khau_ma_hoa'])) {
-                    // Đăng nhập thành công
-                    $_SESSION['user_id'] = $user['ma_nguoi_dung'];
-                    $_SESSION['user_name'] = $user['ho_ten'];
-                    $_SESSION['user_email'] = $user['email'];
+                    // Đăng nhập thành công - sử dụng dual session
+                    user_login($user['ma_nguoi_dung'], $user['ho_ten'], $user['email']);
+                    
+                    // Lưu thêm thông tin khác vào session
                     $_SESSION['user_phone'] = $user['so_dien_thoai'];
                     $_SESSION['user_gender'] = $user['gioi_tinh'];
                     $_SESSION['user_role'] = $user['vai_tro'];
-                    $_SESSION['logged_in'] = true;
                     
                     // Xử lý remember me (tạm thời lưu vào session, không dùng DB)
                     if ($remember) {

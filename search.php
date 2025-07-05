@@ -1,5 +1,5 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
 
 // Ensure session is started
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
         exit;
     }
     
-    $user_id = $_SESSION['user_id'] ?? 0;
+    $user_id = get_user_id();
     
     if ($product_id > 0 && $user_id > 0) {
         try {

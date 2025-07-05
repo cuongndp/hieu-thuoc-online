@@ -1,8 +1,12 @@
 <?php
-session_start();
+include '../config/dual_session.php';
 include '../config/database.php';
 
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+// Ensure session is started
+ensure_session_started();
+
+// Kiểm tra đăng nhập admin
+if (!is_admin_logged_in()) {
     echo '<div style="text-align: center; padding: 20px; color: #e74c3c;">Không có quyền truy cập</div>';
     exit;
 }

@@ -1,5 +1,5 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
 include 'config/loyalty_points.php';
 
@@ -9,7 +9,7 @@ ensure_session_started();
 // Kiểm tra đăng nhập
 require_user_login();
 
-$user_id = $_SESSION['user_id'];
+$user_id = get_user_id();
 $message = '';
 $message_type = '';
 $active_tab = $_GET['tab'] ?? 'profile';

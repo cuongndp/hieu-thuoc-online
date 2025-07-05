@@ -1,5 +1,5 @@
 <?php
-include '../config/simple_session.php';
+include '../config/dual_session.php';
 include '../config/database.php';
 
 // Ensure session is started

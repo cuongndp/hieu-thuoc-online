@@ -1,5 +1,5 @@
 <?php
-include '../config/simple_session.php';
+include '../config/dual_session.php';
 include '../config/database.php';
 
 // Ensure session is started
@@ -28,17 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $admin = $result->fetch_assoc();
                 
                 if (password_verify($password, $admin['mat_khau_ma_hoa'])) {
-                    $_SESSION['admin_logged_in'] = true;
-                    $_SESSION['admin_id'] = $admin['ma_nguoi_dung'];
-                    $_SESSION['admin_name'] = $admin['ho_ten'];
-                    $_SESSION['admin_email'] = $admin['email'];
+                    // Đăng nhập admin thành công - sử dụng dual session
+                    $admin_role = ($admin['vai_tro'] === 'quan_tri' || $admin['vai_tro'] === 'quan_ly') ? 'admin' : 'nhan_vien';
+                    admin_login($admin['ma_nguoi_dung'], $admin['ho_ten'], $admin['email'], $admin_role);
+                    
+                    // Lưu thêm thông tin khác vào session
                     $_SESSION['user_role'] = $admin['vai_tro']; // Lưu vai trò vào session
-                    // Phân quyền cho menu/sidebar
-                    if ($admin['vai_tro'] === 'quan_tri' || $admin['vai_tro'] === 'quan_ly') {
-                        $_SESSION['admin_role'] = 'admin';
-                    } else {
-                        $_SESSION['admin_role'] = 'nhan_vien';
-                    }
                     header('Location: dashboard.php');
                     exit;
                 } else {

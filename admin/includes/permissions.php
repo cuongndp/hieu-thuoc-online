@@ -1,5 +1,6 @@
 <?php
 // admin/includes/permissions.php - Hệ thống kiểm tra quyền đơn giản
+include_once '../config/dual_session.php';
 
 // Định nghĩa quyền cho từng vai trò
 $role_permissions = [
@@ -33,7 +34,7 @@ $role_permissions = [
 function checkPermission($permission) {
     global $role_permissions;
     
-    // Sử dụng function từ session_config.php
+    // Sử dụng function từ dual_session.php
     if (!is_admin_logged_in()) {
         return false;
     }

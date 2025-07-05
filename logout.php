@@ -1,6 +1,6 @@
 <?php
 // logout.php - Xử lý đăng xuất thuần PHP
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 
 // Ensure session is started
 ensure_session_started();

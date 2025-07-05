@@ -1,5 +1,5 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
 
 // Ensure session is started
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
         exit;
     }
     
-    $user_id = $_SESSION['user_id'] ?? 0;
+    $user_id = get_user_id();
     
 if ($product_id > 0 && $user_id > 0) {
         try {
@@ -331,7 +331,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
                             </div>
                             
                             <div class="product-actions">
-                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                <?php if (is_user_logged_in()): ?>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="add_to_cart" value="1">
                                         <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
@@ -400,7 +400,7 @@ echo "<!-- Debug: Category ID = $category_id, Found " . count($products) . " pro
                                         <?php endif; ?>
                                     </div>
                                     <div style="display: flex; gap: 10px;">
-                                        <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                        <?php if (is_user_logged_in()): ?>
                                             <form method="POST" style="display: inline;">
                                                 <input type="hidden" name="add_to_cart" value="1">
                                                 <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">

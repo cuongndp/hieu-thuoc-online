@@ -1,9 +1,6 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
-
-// Ensure session is started
-ensure_session_started();
 
 // Xử lý add to cart - LƯU VÀO DATABASE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
@@ -16,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
         exit;
     }
     
-    $user_id = $_SESSION['user_id'] ?? 0;
+    $user_id = get_user_id();
     
     // Debug
     error_log("Add to Cart - User ID: $user_id, Product ID: $product_id");
@@ -404,7 +401,7 @@ if ($in_flash_sale) {
                             <span class="flash-sale-old-price"><?php echo number_format($gia_goc, 0, ',', '.'); ?>đ</span>
                         </div>
                         <div class="flash-sale-actions">
-                            <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                            <?php if (is_user_logged_in()): ?>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="add_to_cart" value="1">
                                     <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
@@ -639,7 +636,7 @@ if ($in_flash_sale) {
                                 <?php endif; ?>
                             </div>
                             <div class="product-actions">
-                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                <?php if (is_user_logged_in()): ?>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="add_to_cart" value="1">
                                         <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
@@ -716,13 +713,13 @@ if ($in_flash_sale) {
     </section>
 
     <!-- Welcome message for logged in users -->
-    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+    <?php if (is_user_logged_in()): ?>
     <section class="welcome-section" style="background: #f8f9fa; padding: 40px 0;">
         <div class="container">
             <div style="text-align: center; max-width: 600px; margin: 0 auto;">
                 <h3 style="color: #2c3e50; margin-bottom: 15px;">
                     <i class="fas fa-user-check" style="color: #27ae60; margin-right: 10px;"></i>
-                    Xin chào <?php echo htmlspecialchars($_SESSION['user_name']); ?>!
+                    Xin chào <?php echo htmlspecialchars(get_user_name()); ?>!
                 </h3>
                 <p style="color: #7f8c8d; font-size: 16px;">
                     Cảm ơn bạn đã tin tưởng VitaMeds. Hãy khám phá các sản phẩm chăm sóc sức khỏe chất lượng của chúng tôi.

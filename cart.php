@@ -1,14 +1,11 @@
 <?php
-include 'config/simple_session.php';
+include 'config/dual_session.php';
 include 'config/database.php';
-
-// Ensure session is started
-ensure_session_started();
 
 // Kiểm tra đăng nhập
 require_user_login();
 
-$user_id = $_SESSION['user_id'] ?? 0;
+$user_id = get_user_id();
 
 // Xử lý add to cart từ header
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {

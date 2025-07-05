@@ -1,9 +1,12 @@
 <?php
-session_start();
+include '../config/dual_session.php';
 include '../config/database.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Chỉ cho phép nhân viên đăng nhập
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in'] || ($_SESSION['admin_role'] ?? '') !== 'nhan_vien') {
+if (!is_admin_logged_in() || ($_SESSION['admin_role'] ?? '') !== 'nhan_vien') {
     header('Location: dashboard.php');
     exit;
 }

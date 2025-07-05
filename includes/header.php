@@ -1,15 +1,12 @@
 <?php
 // includes/header.php - Header component với database
-include_once 'config/simple_session.php';
-include_once 'config/database.php';
-
-// Ensure session is started
-ensure_session_started();
+include_once __DIR__ . '/../config/dual_session.php';
+include_once __DIR__ . '/../config/database.php';
 
 // Kiểm tra trạng thái đăng nhập
 $is_logged_in = is_user_logged_in();
-$user_name = $_SESSION['user_name'] ?? '';
-$user_id = $_SESSION['user_id'] ?? 0;
+$user_name = get_user_name();
+$user_id = get_user_id();
 
 // Xử lý add to cart - LƯU VÀO DATABASE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {

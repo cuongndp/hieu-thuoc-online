@@ -1,14 +1,17 @@
 <?php
-session_start();
+include 'config/simple_session.php';
 include 'config/database.php';
+
+// Ensure session is started
+ensure_session_started();
 
 // Xử lý add to cart - FIXED VERSION (giống trang danh mục)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
     $product_id = $_POST['product_id'] ?? 0;
     $quantity = 1;
     
-    // Kiểm tra đăng nhập
-    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+          // Kiểm tra đăng nhập
+      if (!is_user_logged_in()) {
         header('Location: login.php');
         exit;
     }
@@ -363,7 +366,7 @@ $total_pages = ceil($total_products / $per_page);
                             </div>
                             
                             <div class="product-actions">
-                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                <?php if (is_user_logged_in()): ?>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="add_to_cart" value="1">
                                         <input type="hidden" name="product_id" value="<?php echo $product['ma_san_pham']; ?>">
@@ -468,27 +471,35 @@ $total_pages = ceil($total_products / $per_page);
                 
                 <div class="team-grid">
                     <div class="team-member">
-                        <div class="member-avatar">B</div>
+                        <div class="member-avatar">
+                            <img src="images/anhthe.jpg" alt="Lê Hải Bằng" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        </div>
                         <div class="member-name">Lê Hải Bằng</div>
-                        <div class="member-id">MSSV: 21010001</div>
+                        <div class="member-id">MSSV: 054205001811</div>
                     </div>
                     
                     <div class="team-member">
-                        <div class="member-avatar">P</div>
-                        <div class="member-name">nguyễn Văn Phong</div>
-                        <div class="member-id">MSSV: 21010002</div>
+                        <div class="member-avatar">
+                            <img src="images/download1.png" alt="Nguyễn Văn Phong" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        </div>
+                        <div class="member-name">Nguyễn Văn Phong</div>
+                        <div class="member-id">MSSV: 052205013518</div>
                     </div>
                     
                     <div class="team-member">
-                        <div class="member-avatar">C</div>
+                        <div class="member-avatar">
+                            <img src="images/download.png" alt="Nguyễn Đăng Phúc Cường" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        </div>
                         <div class="member-name">Nguyễn Đăng Phúc Cường</div>
-                        <div class="member-id">MSSV: 21010003</div>
+                        <div class="member-id">MSSV: 054205000736</div>
                     </div>
                     
                     <div class="team-member">
-                        <div class="member-avatar">D</div>
+                        <div class="member-avatar">
+                            <img src="images/hinh2.jpg" alt="Lý Khánh Đăng" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        </div>
                         <div class="member-name">Lý Khánh Đăng</div>
-                        <div class="member-id">MSSV: 21010004</div>
+                        <div class="member-id">MSSV: 083205014004</div>
                     </div>
                 </div>
             </div>

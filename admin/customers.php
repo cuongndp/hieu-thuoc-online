@@ -1,11 +1,12 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+// Ensure session is started
+ensure_session_started();
+
+// Kiểm tra đăng nhập admin
+require_admin_login();
 
 $message = '';
 

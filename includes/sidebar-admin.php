@@ -23,6 +23,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <li class="<?php echo $current_page === 'revenue.php' ? 'active' : ''; ?>">
             <a href="revenue.php"><i class="fas fa-chart-line"></i> Thống kê doanh thu</a>
         </li>
+        <?php if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'admin'): ?>
+        <li class="<?php echo $current_page === 'staffs.php' ? 'active' : ''; ?>">
+            <a href="staffs.php"><i class="fas fa-user-tie"></i> Quản lý nhân viên</a>
+        </li>
+        <?php endif; ?>
+        <?php if (isset($_SESSION['admin_role']) && $_SESSION['admin_role'] === 'nhan_vien'): ?>
+        <li class="<?php echo $current_page === 'profile.php' ? 'active' : ''; ?>">
+            <a href="profile.php"><i class="fas fa-user"></i> Thông tin cá nhân</a>
+        </li>
+        <?php endif; ?>
         <li>
             <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
         </li>

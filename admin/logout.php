@@ -1,8 +1,11 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 
-// Xóa tất cả session
-session_destroy();
+// Ensure session is started
+ensure_session_started();
+
+// Xóa admin session
+admin_logout();
 
 // Xóa cookie nếu có
 if (isset($_COOKIE['remember_token'])) {

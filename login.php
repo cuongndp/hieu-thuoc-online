@@ -1,6 +1,9 @@
 <?php
-session_start();
+include 'config/simple_session.php';
 include 'config/database.php';
+
+// Ensure session is started
+ensure_session_started();
 
 // Biến thông báo
 $message = '';
@@ -8,7 +11,7 @@ $message_type = '';
 $show_register = false;
 
 // Kiểm tra nếu đã đăng nhập thì chuyển về trang chủ
-if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
+if (is_user_logged_in()) {
     header('Location: index.php');
     exit;
 }

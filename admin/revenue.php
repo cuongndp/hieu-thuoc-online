@@ -1,10 +1,12 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+
+// Ensure session is started
+ensure_session_started();
+
+// Kiểm tra đăng nhập admin
+require_admin_login();
 $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
 $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
 // Lấy doanh thu và đơn hàng theo tháng/năm

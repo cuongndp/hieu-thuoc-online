@@ -33,7 +33,8 @@ $role_permissions = [
 function checkPermission($permission) {
     global $role_permissions;
     
-    if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+    // Sử dụng function từ session_config.php
+    if (!is_admin_logged_in()) {
         return false;
     }
     
@@ -76,7 +77,8 @@ function isSuperAdmin() {
 function getUserPermissions() {
     global $role_permissions;
     
-    if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+    // Sử dụng function từ session_config.php
+    if (!is_admin_logged_in()) {
         return [];
     }
     

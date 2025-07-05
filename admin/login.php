@@ -1,9 +1,12 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra nếu admin đã đăng nhập
-if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in']) {
+if (is_admin_logged_in()) {
     header('Location: dashboard.php');
     exit;
 }
@@ -30,7 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['admin_name'] = $admin['ho_ten'];
                     $_SESSION['admin_email'] = $admin['email'];
                     $_SESSION['user_role'] = $admin['vai_tro']; // Lưu vai trò vào session
-                    
+                    // Phân quyền cho menu/sidebar
+                    if ($admin['vai_tro'] === 'quan_tri' || $admin['vai_tro'] === 'quan_ly') {
+                        $_SESSION['admin_role'] = 'admin';
+                    } else {
+                        $_SESSION['admin_role'] = 'nhan_vien';
+                    }
                     header('Location: dashboard.php');
                     exit;
                 } else {

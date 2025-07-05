@@ -1,11 +1,12 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+// Ensure session is started
+ensure_session_started();
+
+// Kiểm tra đăng nhập admin
+require_admin_login();
 
 $message = '';
 
@@ -45,6 +46,10 @@ $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $payment_status = isset($_GET['payment_status']) ? $_GET['payment_status'] : '';
+
+// Lấy tháng/năm từ GET, mặc định là tháng/năm hiện tại
+$month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+$year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
 
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 15;
@@ -146,7 +151,7 @@ try {
             SUM(CASE WHEN trang_thai_don_hang = 'cho_xac_nhan' THEN 1 ELSE 0 END) as cho_xac_nhan,
             SUM(CASE WHEN trang_thai_don_hang = 'da_giao' THEN 1 ELSE 0 END) as da_giao,
             SUM(CASE WHEN trang_thai_don_hang = 'da_huy' THEN 1 ELSE 0 END) as da_huy,
-            SUM(CASE WHEN trang_thai_thanh_toan = 'da_thanh_toan' THEN tong_tien_thanh_toan ELSE 0 END) as total_revenue
+            SUM(CASE WHEN trang_thai_thanh_toan = 'da_thanh_toan' AND trang_thai_don_hang = 'da_giao' AND MONTH(ngay_tao) = $month AND YEAR(ngay_tao) = $year THEN tong_tien_thanh_toan ELSE 0 END) as total_revenue
         FROM don_hang
     ");
     

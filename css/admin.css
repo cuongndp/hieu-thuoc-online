@@ -680,3 +680,66 @@ body {
     box-shadow: 0 2px 8px rgba(44,62,80,0.06) !important;
     border: none !important;
 }
+
+/* Checkbox styling */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #2c3e50;
+    margin-bottom: 0;
+    line-height: 1.4;
+    min-height: 20px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    accent-color: #3498db;
+    vertical-align: middle;
+    flex-shrink: 0;
+    position: relative;
+    top: 0;
+}
+
+.checkbox-label:hover {
+    color: #3498db;
+}
+
+/* Đảm bảo form-group có alignment tốt */
+.form-group .checkbox-label {
+    margin-top: 2px;
+}
+
+/* Đặc biệt cho form-row với checkbox */
+.form-row .form-group .checkbox-label {
+    margin-top: 0;
+    padding-top: 2px;
+}
+
+/* Căn chỉnh checkbox với text một cách chính xác */
+.checkbox-label input[type="checkbox"] {
+    transform: translateY(0.5px);
+}
+
+/* Đảm bảo text không bị dịch chuyển */
+.checkbox-label span,
+.checkbox-label {
+    display: flex;
+    align-items: baseline;
+}
+
+/* Override cho trường hợp đặc biệt */
+.modal .checkbox-label {
+    align-items: center !important;
+}
+
+.modal .checkbox-label input[type="checkbox"] {
+    margin-top: 1px;
+    margin-bottom: 1px;
+}

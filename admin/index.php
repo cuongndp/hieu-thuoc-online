@@ -1,13 +1,13 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 include 'includes/permissions.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra đăng nhập admin
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+require_admin_login();
 
 // Kiểm tra quyền xem dashboard
 requirePermission('dashboard_view');

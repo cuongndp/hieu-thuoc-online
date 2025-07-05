@@ -1,12 +1,12 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra đăng nhập admin
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+require_admin_login();
 
 // Lấy tháng/năm từ GET, mặc định là tháng/năm hiện tại
 $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
@@ -27,8 +27,8 @@ try {
         $total_orders = $result->fetch_assoc()['count'];
     }
     
-    // Tổng doanh thu
-    $result = $conn->query("SELECT SUM(tong_tien_thanh_toan) as total FROM don_hang WHERE trang_thai_thanh_toan = 'da_thanh_toan' AND trang_thai_don_hang = 'da_giao'");
+    // Tổng doanh thu THÁNG HIỆN TẠI
+    $result = $conn->query("SELECT SUM(tong_tien_thanh_toan) as total FROM don_hang WHERE trang_thai_thanh_toan = 'da_thanh_toan' AND trang_thai_don_hang = 'da_giao' AND MONTH(ngay_tao) = $month AND YEAR(ngay_tao) = $year");
     if ($result) {
         $total_revenue = $result->fetch_assoc()['total'] ?? 0;
     }

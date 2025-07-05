@@ -1,13 +1,13 @@
 <?php
-session_start();
+include '../config/simple_session.php';
 include '../config/database.php';
 include '../config/reviews.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra đăng nhập admin
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
-    header('Location: login.php');
-    exit;
-}
+require_admin_login();
 
 $success_message = '';
 $error_message = '';

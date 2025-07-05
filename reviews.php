@@ -1,6 +1,9 @@
 <?php
-session_start();
+include 'config/simple_session.php';
 include 'config/database.php';
+
+// Ensure session is started
+ensure_session_started();
 include 'config/reviews.php';
 
 $product_id = intval($_GET['product_id'] ?? 0);

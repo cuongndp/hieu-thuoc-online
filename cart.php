@@ -1,13 +1,12 @@
 <?php
-session_start();
+include 'config/simple_session.php';
 include 'config/database.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra đăng nhập
-if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-    // Nếu chưa đăng nhập, chuyển hướng đến trang login
-    header('Location: login.php');
-    exit;
-}
+require_user_login();
 
 $user_id = $_SESSION['user_id'] ?? 0;
 

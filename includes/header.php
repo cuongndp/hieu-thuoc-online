@@ -1,13 +1,13 @@
 <?php
 // includes/header.php - Header component với database
-if (!isset($_SESSION)) {
-    session_start();
-}
-
+include_once 'config/simple_session.php';
 include_once 'config/database.php';
 
+// Ensure session is started
+ensure_session_started();
+
 // Kiểm tra trạng thái đăng nhập
-$is_logged_in = isset($_SESSION['logged_in']) && $_SESSION['logged_in'];
+$is_logged_in = is_user_logged_in();
 $user_name = $_SESSION['user_name'] ?? '';
 $user_id = $_SESSION['user_id'] ?? 0;
 

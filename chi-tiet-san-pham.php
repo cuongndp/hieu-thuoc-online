@@ -1,6 +1,9 @@
 <?php
-session_start();
+include 'config/simple_session.php';
 include 'config/database.php';
+
+// Ensure session is started
+ensure_session_started();
 include 'config/reviews.php';
 
 // Lấy product ID từ URL
@@ -16,7 +19,7 @@ if (!$product_id) {
 
 // Xử lý add to cart
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
-    if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+    if (!is_user_logged_in()) {
         header('Location: login.php');
         exit;
     }
@@ -202,7 +205,7 @@ $rating_stats = get_product_rating_stats($product_id, $conn);
 // Kiểm tra xem user đã mua và có thể đánh giá sản phẩm này không
 $can_review = false;
 $has_reviewed = false;
-if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
+                                 if (is_user_logged_in()) {
     $user_id = $_SESSION['user_id'] ?? 0;
     $can_review = has_user_purchased_product($user_id, $product_id, $conn);
     $has_reviewed = has_user_reviewed_product($user_id, $product_id, 0, $conn);
@@ -566,7 +569,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']) {
                             </div>
                         </div>
                         
-                        <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                        <?php if (is_user_logged_in()): ?>
                             <button type="submit" class="add-to-cart-btn">
                                 <i class="fas fa-cart-plus"></i> Thêm vào giỏ hàng
                             </button>

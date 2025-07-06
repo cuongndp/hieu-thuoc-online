@@ -221,10 +221,10 @@ $rating_stats = get_product_rating_stats($product_id, $conn);
 // Kiểm tra xem user đã mua và có thể đánh giá sản phẩm này không
 $can_review = false;
 $has_reviewed = false;
-                                 if (is_user_logged_in()) {
+if (is_user_logged_in()) {
     $user_id = get_user_id();
     $can_review = has_user_purchased_product($user_id, $product_id, $conn);
-    $has_reviewed = has_user_reviewed_product($user_id, $product_id, 0, $conn);
+    $has_reviewed = has_user_ever_reviewed_product($user_id, $product_id, $conn);
 }
 ?>
 <!DOCTYPE html>
@@ -744,15 +744,17 @@ $has_reviewed = false;
                 </div>
                 
                 <!-- Review Button -->
-                                    <?php if (is_user_logged_in()): ?>
-                    <?php if ($can_review && !$has_reviewed): ?>
+                <?php if (is_user_logged_in()): ?>
+                    <?php if ($can_review): ?>
                         <a href="review.php?product_id=<?= $product_id ?>" class="review-btn">
-                            <i class="fas fa-star"></i> Viết đánh giá
+                            <i class="fas fa-star"></i> 
+                            <?= $has_reviewed ? 'Viết thêm đánh giá' : 'Viết đánh giá' ?>
                         </a>
-                    <?php elseif ($has_reviewed): ?>
-                        <span class="reviewed-badge">
-                            <i class="fas fa-check"></i> Bạn đã đánh giá sản phẩm này
-                        </span>
+                        <?php if ($has_reviewed): ?>
+                            <small style="display: block; color: #666; margin-top: 5px;">
+                                <i class="fas fa-info-circle"></i> Bạn có thể đánh giá cho từng đơn hàng
+                            </small>
+                        <?php endif; ?>
                     <?php else: ?>
                         <span class="review-note">
                             <i class="fas fa-info-circle"></i> Mua sản phẩm để đánh giá

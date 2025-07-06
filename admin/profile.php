@@ -126,8 +126,15 @@ $staff = $conn->query("SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $staff_id 
 <body>
     <?php include '../includes/sidebar-admin.php'; ?>
     <div class="main-content">
-        <div class="profile-staff-container">
-            <h2>Thông tin cá nhân nhân viên</h2>
+        <?php 
+        $page_title = 'Thông tin cá nhân';
+        $page_icon = 'fas fa-user';
+        include '../includes/admin-header.php'; 
+        ?>
+        
+        <div class="dashboard-content">
+            <div class="profile-staff-container">
+                <h2>Thông tin cá nhân nhân viên</h2>
             <?php if ($message): ?>
                 <div class="<?php echo $success ? 'alert-success' : 'alert-error'; ?>"><?php echo htmlspecialchars($message); ?></div>
             <?php endif; ?>
@@ -151,7 +158,10 @@ $staff = $conn->query("SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $staff_id 
                 <input type="password" id="confirm_password" name="confirm_password" required>
                 <button type="submit"><i class="fas fa-key"></i> Đổi mật khẩu</button>
             </form>
+            </div>
         </div>
     </div>
+    
+    <script src="js/admin.js"></script>
 </body>
 </html> 

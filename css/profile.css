@@ -456,3 +456,397 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Mobile First Responsive Design */
+
+        /* Extra Small devices (phones, 320px - 480px) */
+        @media (max-width: 480px) {
+            .profile-container {
+                margin: 10px;
+                padding: 0;
+                border-radius: 10px;
+            }
+            
+            .profile-header {
+                padding: 20px 15px;
+                text-align: center;
+            }
+            
+            .profile-header h1 {
+                font-size: 1.5rem;
+                margin-bottom: 8px;
+            }
+            
+            .profile-header p {
+                font-size: 0.9rem;
+            }
+            
+            .profile-content {
+                padding: 15px;
+            }
+            
+            .profile-nav {
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            
+            .profile-nav a {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+                text-align: center;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .profile-section {
+                margin-bottom: 20px;
+            }
+            
+            .profile-section h3 {
+                font-size: 1.2rem;
+                margin-bottom: 10px;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            .form-group label {
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                border-radius: 8px;
+                min-height: 44px;
+            }
+            
+            .form-group textarea {
+                min-height: 80px;
+            }
+            
+            .btn {
+                padding: 10px 15px;
+                font-size: 0.9rem;
+                min-height: 44px;
+                border-radius: 8px;
+            }
+            
+            .btn-primary {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .profile-info {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 15px;
+            }
+            
+            .info-item {
+                padding: 10px;
+                border-radius: 8px;
+                background: #f8f9fa;
+            }
+            
+            .info-label {
+                font-size: 0.8rem;
+                color: #666;
+                margin-bottom: 5px;
+            }
+            
+            .info-value {
+                font-size: 0.9rem;
+                color: #333;
+            }
+            
+            .order-list {
+                gap: 10px;
+            }
+            
+            .order-item {
+                padding: 15px;
+                border-radius: 8px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .order-info {
+                width: 100%;
+            }
+            
+            .order-id {
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+            
+            .order-date {
+                font-size: 0.8rem;
+                color: #666;
+            }
+            
+            .order-total {
+                font-size: 1rem;
+                font-weight: bold;
+                color: #e74c3c;
+            }
+            
+            .order-status {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+                border-radius: 4px;
+                margin-top: 5px;
+            }
+            
+            .order-actions {
+                width: 100%;
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+            
+            .order-actions .btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                min-height: 36px;
+            }
+        }
+
+        /* Small devices (landscape phones, 481px - 768px) */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .profile-container {
+                margin: 15px;
+                padding: 0;
+            }
+            
+            .profile-header {
+                padding: 25px 20px;
+            }
+            
+            .profile-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .profile-content {
+                padding: 20px;
+            }
+            
+            .profile-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 25px;
+            }
+            
+            .profile-nav a {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                min-height: 44px;
+                flex: 1;
+                text-align: center;
+            }
+            
+            .profile-section {
+                margin-bottom: 25px;
+            }
+            
+            .profile-section h3 {
+                font-size: 1.3rem;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                padding: 12px 15px;
+                font-size: 0.95rem;
+            }
+            
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.95rem;
+                min-height: 44px;
+            }
+            
+            .profile-info {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                margin: 0 auto 20px;
+            }
+            
+            .order-item {
+                padding: 20px;
+                flex-direction: row;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .order-info {
+                flex: 1;
+            }
+            
+            .order-actions {
+                width: auto;
+                gap: 10px;
+            }
+        }
+
+        /* Medium devices (tablets, 769px - 1024px) */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .profile-container {
+                margin: 20px auto;
+                padding: 0;
+                max-width: 900px;
+            }
+            
+            .profile-header {
+                padding: 30px;
+            }
+            
+            .profile-header h1 {
+                font-size: 2rem;
+            }
+            
+            .profile-content {
+                padding: 30px;
+            }
+            
+            .profile-nav {
+                gap: 15px;
+                margin-bottom: 30px;
+            }
+            
+            .profile-nav a {
+                padding: 15px 25px;
+                font-size: 1rem;
+            }
+            
+            .profile-section {
+                margin-bottom: 30px;
+            }
+            
+            .profile-section h3 {
+                font-size: 1.4rem;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                padding: 14px 18px;
+                font-size: 1rem;
+            }
+            
+            .btn {
+                padding: 14px 25px;
+                font-size: 1rem;
+            }
+            
+            .profile-info {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+            
+            .profile-avatar {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .order-item {
+                padding: 25px;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .profile-nav a, .btn, .order-actions .btn {
+                min-height: 44px;
+                padding: 12px 20px;
+                touch-action: manipulation;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                min-height: 44px;
+                padding: 12px 15px;
+            }
+            
+            .profile-nav a:hover, .btn:hover {
+                transform: none;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .profile-nav, .order-actions, .btn {
+                display: none;
+            }
+            
+            .profile-container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+            }
+            
+            .profile-header {
+                background: none;
+                color: #333;
+                padding: 20px 0;
+                border-bottom: 1px solid #ccc;
+            }
+            
+            .profile-content {
+                padding: 20px 0;
+            }
+            
+            .profile-section {
+                margin-bottom: 20px;
+            }
+            
+            .profile-section h3 {
+                font-size: 1.2rem;
+                color: #333;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                border: 1px solid #ccc;
+                background: white;
+                padding: 8px 12px;
+            }
+            
+            .order-item {
+                border: 1px solid #ccc;
+                padding: 15px;
+                margin-bottom: 10px;
+            }
+            
+            .order-status {
+                border: 1px solid #ccc;
+                background: white;
+                color: #333;
+            }
+        }

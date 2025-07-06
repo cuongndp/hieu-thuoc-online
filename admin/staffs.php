@@ -111,7 +111,7 @@ $staffs = $conn->query("SELECT * FROM nguoi_dung WHERE vai_tro = 'nhan_vien' ORD
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý nhân viên - VitaMeds Admin</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <style>
         .staff-container { max-width: 1000px; margin: 0 auto; }
         .staff-form-card { background: #fff; padding: 32px 28px; border-radius: 14px; box-shadow: 0 2px 12px #e0e6ed; max-width: 420px; margin-bottom: 36px; margin-top: 20px; }
@@ -154,9 +154,13 @@ $staffs = $conn->query("SELECT * FROM nguoi_dung WHERE vai_tro = 'nhan_vien' ORD
     <div class="admin-wrapper">
         <?php include '../includes/sidebar-admin.php'; ?>
         <div class="main-content staff-container">
-            <div class="page-header">
-                <h1><i class="fas fa-user-tie"></i> Quản lý nhân viên</h1>
-            </div>
+            <?php 
+            $page_title = 'Quản lý nhân viên';
+            $page_icon = 'fas fa-user-tie';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
             <div class="staff-form-card">
                 <h3>Tạo tài khoản nhân viên</h3>
                 <?php if ($message): ?>
@@ -243,7 +247,10 @@ $staffs = $conn->query("SELECT * FROM nguoi_dung WHERE vai_tro = 'nhan_vien' ORD
                     <?php endif; ?>
                 }
             </script>
+            </div>
         </div>
     </div>
+    
+    <script src="js/admin.js"></script>
 </body>
 </html> 

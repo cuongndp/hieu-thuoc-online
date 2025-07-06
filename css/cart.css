@@ -253,19 +253,65 @@
             background: #c82333;
         }
         
-        @media (max-width: 768px) {
+        /* Mobile First Responsive Design */
+        
+        /* Extra Small devices (phones, 320px - 480px) */
+        @media (max-width: 480px) {
             .cart-container {
                 margin: 20px auto;
                 padding: 0 15px;
             }
             
-            .cart-table {
+            .cart-header {
+                padding: 20px 15px;
+            }
+            
+            .cart-header h1 {
+                font-size: 24px;
+            }
+            
+            .cart-header p {
                 font-size: 14px;
             }
             
-            .cart-table th,
+            .cart-table {
+                font-size: 13px;
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            .cart-table thead {
+                display: none;
+            }
+            
+            .cart-table tbody {
+                display: block;
+            }
+            
+            .cart-table tr {
+                display: block;
+                border: 1px solid #e0e6ed;
+                margin-bottom: 15px;
+                border-radius: 8px;
+                padding: 15px;
+                background: #f8f9fa;
+            }
+            
             .cart-table td {
-                padding: 10px 8px;
+                display: block;
+                padding: 8px 0;
+                border-bottom: none;
+                position: relative;
+            }
+            
+            .cart-table td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #2c3e50;
+                display: inline-block;
+                min-width: 80px;
+                margin-right: 10px;
             }
             
             .product-info {
@@ -274,13 +320,247 @@
                 gap: 10px;
             }
             
+            .product-image {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto;
+            }
+            
+            .product-details h4 {
+                font-size: 14px;
+            }
+            
+            .product-details p {
+                font-size: 12px;
+            }
+            
+            .quantity-control {
+                justify-content: center;
+            }
+            
+            .quantity-input {
+                width: 50px;
+                padding: 6px;
+                font-size: 14px;
+            }
+            
+            .price {
+                font-size: 16px;
+                text-align: center;
+            }
+            
+            .remove-btn, .update-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+                min-height: 44px;
+            }
+            
+            .cart-summary {
+                padding: 20px 15px;
+            }
+            
+            .summary-row {
+                font-size: 14px;
+            }
+            
+            .summary-row.total {
+                font-size: 16px;
+            }
+            
             .cart-actions {
+                padding: 15px;
                 flex-direction: column;
                 align-items: stretch;
+                gap: 10px;
             }
             
             .cart-actions .btn {
                 width: 100%;
                 margin-bottom: 10px;
+                min-height: 44px;
+                font-size: 14px;
+            }
+            
+            .empty-cart {
+                padding: 40px 15px;
+            }
+            
+            .empty-cart i {
+                font-size: 48px;
+            }
+            
+            .empty-cart h3 {
+                font-size: 18px;
+            }
+            
+            .alert {
+                margin: 15px;
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Small devices (landscape phones, 481px - 768px) */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .cart-container {
+                margin: 20px auto;
+                padding: 0 20px;
+            }
+            
+            .cart-header {
+                padding: 25px 20px;
+            }
+            
+            .cart-header h1 {
+                font-size: 26px;
+            }
+            
+            .cart-table {
+                font-size: 14px;
+            }
+            
+            .cart-table th,
+            .cart-table td {
+                padding: 12px 10px;
+            }
+            
+            .product-info {
+                flex-direction: row;
+                gap: 15px;
+            }
+            
+            .product-image {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .product-details h4 {
+                font-size: 15px;
+            }
+            
+            .quantity-control {
+                max-width: 110px;
+            }
+            
+            .quantity-input {
+                width: 55px;
+            }
+            
+            .remove-btn, .update-btn {
+                padding: 7px 11px;
+                font-size: 13px;
+                min-height: 44px;
+            }
+            
+            .cart-summary {
+                padding: 25px 20px;
+            }
+            
+            .cart-actions {
+                padding: 20px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .cart-actions .btn {
+                width: 100%;
+                margin-bottom: 10px;
+                min-height: 44px;
+            }
+            
+            .empty-cart {
+                padding: 50px 20px;
+            }
+            
+            .empty-cart i {
+                font-size: 56px;
+            }
+        }
+        
+        /* Medium devices (tablets, 769px - 1024px) */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .cart-container {
+                padding: 0 30px;
+            }
+            
+            .cart-header {
+                padding: 30px;
+            }
+            
+            .cart-table th,
+            .cart-table td {
+                padding: 15px 12px;
+            }
+            
+            .product-info {
+                gap: 15px;
+            }
+            
+            .product-image {
+                width: 65px;
+                height: 65px;
+            }
+            
+            .quantity-control {
+                max-width: 115px;
+            }
+            
+            .cart-actions {
+                padding: 25px 30px;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            
+            .cart-actions .btn {
+                width: auto;
+                margin-bottom: 0;
+            }
+        }
+        
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .remove-btn, .update-btn, .btn {
+                min-height: 44px;
+                padding: 12px 20px;
+                touch-action: manipulation;
+            }
+            
+            .quantity-input {
+                min-height: 44px;
+                padding: 10px;
+            }
+            
+            .cart-table td:hover {
+                background: none;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            .cart-actions, .remove-btn, .update-btn {
+                display: none;
+            }
+            
+            .cart-container {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .cart-header {
+                background: none;
+                color: #333;
+                border: 1px solid #ccc;
+            }
+            
+            .cart-table {
+                font-size: 12px;
+            }
+            
+            .cart-table th,
+            .cart-table td {
+                padding: 8px;
+                border: 1px solid #ccc;
             }
         }

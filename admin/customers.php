@@ -97,195 +97,83 @@ $total_stats = $conn->query("SELECT COUNT(*) as total FROM nguoi_dung WHERE vai_
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Khách hàng - VitaMeds Admin</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            .admin-wrapper.sidebar-open .sidebar {
+                transform: translateX(0);
+            }
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
-            color: #2c3e50;
-        }
-
-        .admin-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-header h3 {
-            color: #ecf0f1;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #ecf0f1;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-menu a i {
-            width: 20px;
-            margin-right: 10px;
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 30px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-
-        .page-header h1 {
-            color: #2c3e50;
-            font-size: 28px;
-        }
-
+    </style>
+    <style>
         .stats-card {
             background: white;
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             text-align: center;
         }
 
         .stats-card h3 {
-            font-size: 32px;
+            font-size: 48px;
             color: #3498db;
             margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .stats-card p {
+            font-size: 16px;
+            color: #7f8c8d;
         }
 
         .search-form {
             background: white;
             padding: 20px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .search-form input {
-            width: 300px;
-            padding: 10px;
+            flex: 1;
+            min-width: 250px;
+            padding: 12px;
             border: 2px solid #ecf0f1;
             border-radius: 6px;
-            margin-right: 10px;
+            font-size: 14px;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2980b9;
-        }
-
-        .btn-info {
-            background: #17a2b8;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-warning {
-            background: #f39c12;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .dashboard-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 15px 12px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .table th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-form input {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .stats-card {
+                padding: 20px;
+            }
+            
+            .stats-card h3 {
+                font-size: 36px;
+            }
         }
 
         .customer-info {
@@ -349,12 +237,12 @@ $total_stats = $conn->query("SELECT COUNT(*) as total FROM nguoi_dung WHERE vai_
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 15px;
+            .stats-card {
+                padding: 20px;
             }
-            .sidebar {
-                transform: translateX(-100%);
+            
+            .stats-card h3 {
+                font-size: 36px;
             }
         }
     </style>
@@ -365,9 +253,13 @@ $total_stats = $conn->query("SELECT COUNT(*) as total FROM nguoi_dung WHERE vai_
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="page-header">
-                <h1><i class="fas fa-users"></i> Quản lý Khách hàng</h1>
-            </div>
+            <?php 
+            $page_title = 'Quản lý Khách hàng';
+            $page_icon = 'fas fa-users';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
 
             <?php if ($message): ?>
             <div class="alert">
@@ -495,9 +387,23 @@ $total_stats = $conn->query("SELECT COUNT(*) as total FROM nguoi_dung WHERE vai_
                     <?php endif; ?>
                 </div>
             </div>
+            </div>
         </div>
     </div>
 
+    <script>
+        // Simple responsive toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const adminWrapper = document.querySelector('.admin-wrapper');
+            
+            if (sidebarToggle && adminWrapper) {
+                sidebarToggle.addEventListener('click', function() {
+                    adminWrapper.classList.toggle('sidebar-open');
+                });
+            }
+        });
+    </script>
     <script>
         // Auto hide alert
         setTimeout(function() {

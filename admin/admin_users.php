@@ -258,13 +258,13 @@ $roles = [
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="header">
-                <h1><i class="fas fa-user-shield"></i> Quản Lý Admin</h1>
-                <div class="user-info">
-                    <span>Xin chào, <?php echo htmlspecialchars($_SESSION['admin_name']); ?></span>
-                    <a href="logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
-                </div>
-            </div>
+            <?php 
+            $page_title = 'Quản Lý Admin';
+            $page_icon = 'fas fa-user-shield';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
 
             <?php if (!empty($message)): ?>
                 <div class="message success"><?php echo $message; ?></div>
@@ -381,9 +381,11 @@ $roles = [
                 </div>
                 <?php endif; ?>
             </div>
+            </div>
         </div>
     </div>
 
+    <script src="js/admin.js"></script>
     <script>
         function deleteAdmin(adminId) {
             if (confirm('Bạn có chắc chắn muốn xóa admin này?')) {

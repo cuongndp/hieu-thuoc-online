@@ -65,9 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
                 $stmt_img->execute();
             }
         }
-        $message = "Thêm sản phẩm thành công!";
+        $_SESSION['success_message'] = "Thêm sản phẩm thành công!";
+        header('Location: products.php');
+        exit;
     } else {
-        $message = "Lỗi khi thêm sản phẩm: " . $stmt->error;
+        $_SESSION['error_message'] = "Lỗi khi thêm sản phẩm: " . $stmt->error;
+        header('Location: products.php');
+        exit;
     }
 }
 
@@ -104,10 +108,12 @@ if (isset($_GET['permanent_delete']) && is_numeric($_GET['permanent_delete'])) {
     $delete_product_stmt->bind_param("i", $ma_san_pham);
     
     if ($delete_product_stmt->execute()) {
-        $message = "Xóa sản phẩm thành công!";
+        $_SESSION['success_message'] = "Xóa sản phẩm thành công!";
     } else {
-        $message = "Lỗi khi xóa sản phẩm!";
+        $_SESSION['error_message'] = "Lỗi khi xóa sản phẩm!";
     }
+    header('Location: products.php');
+    exit;
 }
 
 // Xử lý cập nhật sản phẩm
@@ -169,7 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_product'])) {
         $stmt_img->bind_param("issi", $ma_san_pham, $duong_dan, $mo_ta_hinh_anh, $la_hinh_chinh);
         $stmt_img->execute();
     }
-    $message = "Cập nhật sản phẩm thành công!";
+    $_SESSION['success_message'] = "Cập nhật sản phẩm thành công!";
+    header('Location: products.php');
+    exit;
 }
 
 // Lấy danh sách sản phẩm
@@ -273,187 +281,73 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Sản phẩm - VitaMeds Admin</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
-            color: #2c3e50;
-        }
-
-        .admin-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-header h3 {
-            color: #ecf0f1;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-        }
-
-        .sidebar-menu a {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            color: #ecf0f1;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-menu a i {
-            width: 20px;
-            margin-right: 10px;
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 260px;
-            padding: 30px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Product-specific styles */
+        .product-stats {
             margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #ecf0f1;
         }
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2980b9;
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-
-        .search-form {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .search-form input {
-            width: 300px;
-            padding: 10px;
-            border: 2px solid #ecf0f1;
-            border-radius: 6px;
-            margin-right: 10px;
-        }
-
-        .dashboard-card {
+        .product-card {
             background: white;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+            transition: transform 0.3s ease;
         }
 
-        .card-header {
-            padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ecf0f1;
+        .product-card:hover {
+            transform: translateY(-2px);
         }
 
-        .card-body {
-            padding: 20px;
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
         }
 
-        .table {
-            width: 100%;
-            border-collapse: collapse;
+        .product-info {
+            flex: 1;
         }
 
-        .table th,
-        .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .table th {
-            background: #f8f9fa;
+        .product-name {
+            font-size: 16px;
             font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
         }
 
-        .table tbody tr:hover {
-            background: #f8f9fa;
+        .product-meta {
+            color: #7f8c8d;
+            font-size: 13px;
+            margin-bottom: 8px;
         }
 
-        .status-active {
-            color: #27ae60;
-            font-weight: 600;
-        }
-
-        .status-inactive {
-            color: #e74c3c;
-            font-weight: 600;
-        }
-
-        .action-buttons {
+        .product-price {
             display: flex;
-            gap: 5px;
             align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
         }
 
-        .action-buttons .btn {
-            white-space: nowrap;
+        .price-current {
+            font-size: 18px;
+            font-weight: 700;
+            color: #27ae60;
+        }
+
+        .price-original {
+            color: #95a5a6;
+            text-decoration: line-through;
+            font-size: 14px;
+        }
+
+        .product-badges {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
         .badge {
@@ -462,6 +356,7 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
             font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .badge-featured {
@@ -469,52 +364,233 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
             color: #856404;
         }
 
+        .badge-sale {
+            background: #e74c3c;
+            color: white;
+        }
+
         .badge-normal {
             background: #e2e3e5;
             color: #6c757d;
         }
 
-        .price-sale {
+        .badge-active {
+            background: #d1f2eb;
+            color: #00695c;
+        }
+
+        .badge-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .stock-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .stock-low {
             color: #e74c3c;
             font-weight: 600;
         }
 
-        .price-normal {
-            color: #2c3e50;
+        .stock-normal {
+            color: #27ae60;
             font-weight: 600;
         }
 
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 6px;
-            background: #d1f2eb;
-            color: #00695c;
-            border-left: 4px solid #27ae60;
-        }
-
-        .pagination {
+        .action-buttons {
             display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 20px;
+            gap: 8px;
+            align-items: center;
         }
 
-        .page-link {
-            padding: 8px 12px;
-            color: #3498db;
-            text-decoration: none;
-            border: 1px solid #ecf0f1;
-            border-radius: 4px;
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            min-width: auto;
         }
 
-        .page-link:hover,
-        .page-link.active {
+        .search-filters {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 16px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn-search {
             background: #3498db;
             color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Modal */
+        .btn-search:hover {
+            background: #2980b9;
+        }
+
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            margin-left: auto;
+        }
+
+        .btn-add:hover {
+            background: #219a52;
+        }
+
+        .products-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .product-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .product-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+            vertical-align: middle;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Modal improvements */
         .modal {
             display: none;
             position: fixed;
@@ -526,34 +602,50 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
             background-color: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .modal-content {
             background: white;
             border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
+            width: 100%;
+            max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
 
         .modal-header {
-            padding: 20px;
+            background: #f8f9fa;
+            padding: 20px 25px;
             border-bottom: 1px solid #ecf0f1;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+
         .modal-close {
             background: none;
             border: none;
-            font-size: 18px;
+            font-size: 24px;
+            color: #6c757d;
             cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #2c3e50;
         }
 
         .modal-body {
-            padding: 20px;
+            padding: 25px;
         }
 
         .form-group {
@@ -564,15 +656,25 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
+            color: #2c3e50;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border: 2px solid #ecf0f1;
-            border-radius: 6px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
         }
 
         .form-row {
@@ -585,26 +687,200 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
             display: flex;
             align-items: center;
             cursor: pointer;
+            font-weight: 500;
         }
 
         .checkbox-label input {
             margin-right: 8px;
+            width: auto;
         }
 
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .btn-submit {
+            background: #27ae60;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-submit:hover {
+            background: #219a52;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        /* Responsive design */
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0;
-                padding: 15px;
-            }
-            .sidebar {
-                transform: translateX(-100%);
-            }
             .form-row {
                 grid-template-columns: 1fr;
             }
+            
+            .search-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-input,
+            .filter-select {
+                min-width: 100%;
+            }
+            
+            .btn-add {
+                margin-left: 0;
+                margin-top: 15px;
+            }
+            
+            .product-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .product-image {
+                width: 80px;
+                height: 80px;
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .action-buttons .btn {
+                min-width: 60px;
+                white-space: nowrap;
+                font-weight: 600;
+            }
+            
+            .modal-content {
+                margin: 10px;
+                max-width: none;
+            }
         }
 
-        .badge-sale { background: #e74c3c; color: #fff; border-radius: 12px; padding: 4px 14px; font-size: 13px; font-weight: 600; margin-left: 2px; display: inline-block; }
+        /* Enhanced Action Buttons Styling */
+        .action-buttons .btn-info {
+            background: #17a2b8 !important;
+            border-color: #17a2b8 !important;
+            color: white !important;
+        }
+
+        .action-buttons .btn-info:hover {
+            background: #138496 !important;
+            border-color: #117a8b !important;
+        }
+
+        .action-buttons .btn-danger {
+            background: #dc3545 !important;
+            border-color: #dc3545 !important;
+            color: white !important;
+        }
+
+        .action-buttons .btn-danger:hover {
+            background: #c82333 !important;
+            border-color: #bd2130 !important;
+        }
+
+        /* Enhanced Alert Styling */
+        .alert {
+            position: relative;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            animation: slideInDown 0.3s ease-out;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f1b2b5 100%);
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert i {
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        .alert-close {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: inherit;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .alert-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -613,150 +889,250 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="page-header">
-                <h1><i class="fas fa-pills"></i> Quản lý Sản phẩm</h1>
-                <?php if (checkPermission('products_add')): ?>
-                <button class="btn btn-primary" onclick="openModal()">
-                    <i class="fas fa-plus"></i> Thêm sản phẩm
-                </button>
+            <?php 
+            $page_title = 'Quản lý Sản phẩm';
+            $page_icon = 'fas fa-pills';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
+                <?php if (isset($_SESSION['success_message'])): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span><?php echo htmlspecialchars($_SESSION['success_message']); ?></span>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <?php unset($_SESSION['success_message']); ?>
                 <?php endif; ?>
-            </div>
 
-            <?php if (isset($message)): ?>
-            <div class="alert">
-                <?php echo htmlspecialchars($message); ?>
-            </div>
-            <?php endif; ?>
+                <?php if (isset($_SESSION['error_message'])): ?>
+                    <div class="alert alert-error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span><?php echo htmlspecialchars($_SESSION['error_message']); ?></span>
+                        <button class="alert-close" onclick="this.parentElement.style.display='none'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <?php unset($_SESSION['error_message']); ?>
+                <?php endif; ?>
 
-            <!-- Search Form -->
-            <div class="search-form">
-                <form method="GET">
-                    <input type="text" name="search" placeholder="Tìm kiếm sản phẩm..." value="<?php echo htmlspecialchars($search); ?>">
-                    <select name="filter" style="padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px; margin-right: 10px;">
-                        <option value="">Tất cả sản phẩm</option>
-                        <option value="low_stock" <?php echo $filter === 'low_stock' ? 'selected' : ''; ?>>Sắp hết hàng</option>
-                    </select>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Tìm kiếm
-                    </button>
-                    <?php if ($search || $filter): ?>
-                    <a href="products.php" class="btn" style="background: #6c757d; color: white;">
-                        <i class="fas fa-times"></i> Xóa bộ lọc
-                    </a>
-                    <?php endif; ?>
-                </form>
-            </div>
-
-            <!-- Products Table -->
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h3>Danh sách sản phẩm (<?php echo $total_products; ?>)</h3>
+                <!-- Product Overview Stats -->
+                <div class="stats-grid">
+                    <?php
+                    // Tính toán thống kê sản phẩm
+                    $active_products = $conn->query("SELECT COUNT(*) as count FROM san_pham_thuoc WHERE trang_thai_hoat_dong = 1")->fetch_assoc()['count'];
+                    $featured_products = $conn->query("SELECT COUNT(*) as count FROM san_pham_thuoc WHERE san_pham_noi_bat = 1 AND trang_thai_hoat_dong = 1")->fetch_assoc()['count'];
+                    $sale_products = $conn->query("SELECT COUNT(*) as count FROM san_pham_thuoc WHERE is_flash_sale = 1 AND trang_thai_hoat_dong = 1")->fetch_assoc()['count'];
+                    $low_stock_products = $conn->query("SELECT COUNT(*) as count FROM san_pham_thuoc WHERE so_luong_ton_kho <= 10 AND trang_thai_hoat_dong = 1")->fetch_assoc()['count'];
+                    ?>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #3498db;">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php echo number_format($active_products); ?></h3>
+                            <p>Sản phẩm hoạt động</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f39c12;">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php echo number_format($featured_products); ?></h3>
+                            <p>Sản phẩm nổi bật</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #e74c3c;">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php echo number_format($sale_products); ?></h3>
+                            <p>Sản phẩm sale</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #e67e22;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3><?php echo number_format($low_stock_products); ?></h3>
+                            <p>Sắp hết hàng</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Tên sản phẩm</th>
-                                <th>Danh mục</th>
-                                <th>Nhà sản xuất</th>
-                                <th>Giá bán</th>
-                                <th>Tồn kho</th>
-                                <th>Nổi bật</th>
-                                <th>Trạng thái</th>
-                                <th>Chi tiết</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($product = $products->fetch_assoc()): ?>
-                            <tr>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($product['ten_san_pham']); ?></strong>
-                                    <?php if ($product['gia_khuyen_mai']): ?>
-                                        <br><small style="color: #27ae60;">Có khuyến mãi</small>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo htmlspecialchars($product['ten_danh_muc']); ?></td>
-                                <td><?php echo htmlspecialchars($product['ten_nha_san_xuat']); ?></td>
-                                <td>
-                                    <?php if ($product['gia_khuyen_mai']): ?>
-                                        <span class="price-sale"><?php echo number_format($product['gia_khuyen_mai']); ?>đ</span>
-                                        <br><del style="color: #7f8c8d;"><?php echo number_format($product['gia_ban']); ?>đ</del>
-                                    <?php else: ?>
-                                        <span class="price-normal"><?php echo number_format($product['gia_ban']); ?>đ</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo $product['so_luong_ton_kho']; ?></td>
-                                <td>
-                                    <?php if ($product['san_pham_noi_bat']): ?>
-                                        <span class="badge badge-featured">Nổi bật</span>
-                                    <?php elseif ($product['is_flash_sale']): ?>
-                                        <span class="badge badge-sale" style="background: #e74c3c; color: #fff;">SALE</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-normal">Thường</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="<?php echo $product['trang_thai_hoat_dong'] ? 'status-active' : 'status-inactive'; ?>">
-                                        <?php echo $product['trang_thai_hoat_dong'] ? 'Hoạt động' : 'Không hoạt động'; ?>
-                                    </span>
-                                </td>
-                                <?php if (checkPermission('products_edit')): ?>
-                                <td>
-                                    <?php
-                                    $img_sql = "SELECT duong_dan_hinh_anh FROM hinh_anh_san_pham WHERE ma_san_pham = ? AND la_hinh_chinh = 1 LIMIT 1";
-                                    $img_stmt = $conn->prepare($img_sql);
-                                    $img_stmt->bind_param("i", $product['ma_san_pham']);
-                                    $img_stmt->execute();
-                                    $img_result = $img_stmt->get_result();
-                                    $img_row = $img_result->fetch_assoc();
-                                    $img_url = $img_row ? $img_row['duong_dan_hinh_anh'] : '';
-                                    ?>
-                                    <button class="btn btn-primary btn-edit" 
-                                        data-id="<?php echo $product['ma_san_pham'] ?? ''; ?>"
-                                        data-ten="<?php echo htmlspecialchars($product['ten_san_pham'] ?? ''); ?>"
-                                        data-danhmuc="<?php echo $product['ma_danh_muc'] ?? ''; ?>"
-                                        data-nhasx="<?php echo $product['ma_nha_san_xuat'] ?? ''; ?>"
-                                        data-mota="<?php echo htmlspecialchars($product['mo_ta'] ?? ''); ?>"
-                                        data-giaban="<?php echo htmlspecialchars((string)($product['gia_ban'] ?? '')); ?>"
-                                        data-giakm="<?php echo htmlspecialchars((string)($product['gia_khuyen_mai'] ?? '')); ?>"
-                                        data-tonkho="<?php echo htmlspecialchars((string)($product['so_luong_ton_kho'] ?? '')); ?>"
-                                        data-noibat="<?php echo $product['san_pham_noi_bat'] ?? 0; ?>"
-                                        data-flashsale="<?php echo $product['is_flash_sale'] ?? 0; ?>"
-                                        data-img="<?php echo htmlspecialchars((string)($img_url ?? '')); ?>"
-                                        data-quy_cach_dong_goi="<?php echo htmlspecialchars($product['quy_cach_dong_goi'] ?? ''); ?>"
-                                        data-can_don_thuoc="<?php echo $product['can_don_thuoc'] ?? 0; ?>"
-                                        data-so_lo="<?php echo htmlspecialchars($product['so_lo'] ?? ''); ?>"
-                                        data-ma_vach="<?php echo htmlspecialchars($product['ma_vach'] ?? ''); ?>"
-                                        data-ma_sku="<?php echo htmlspecialchars($product['ma_sku'] ?? ''); ?>"
-                                        data-trong_luong="<?php echo htmlspecialchars((string)($product['trong_luong'] ?? '')); ?>"
-                                        data-dieu_kien_bao_quan="<?php echo htmlspecialchars($product['dieu_kien_bao_quan'] ?? ''); ?>"
-                                        data-tac_dung_phu="<?php echo htmlspecialchars($product['tac_dung_phu'] ?? ''); ?>"
-                                        data-chong_chi_dinh="<?php echo htmlspecialchars($product['chong_chi_dinh'] ?? ''); ?>"
-                                        data-huong_dan_su_dung="<?php echo htmlspecialchars($product['huong_dan_su_dung'] ?? ''); ?>"
-                                        data-gioi_han_tuoi="<?php echo htmlspecialchars($product['gioi_han_tuoi'] ?? ''); ?>"
-                                        data-trang_thai_hoat_dong="<?php echo $product['trang_thai_hoat_dong'] ?? 0; ?>"
-                                        data-ten_hoat_chat="<?php echo htmlspecialchars($product['ten_hoat_chat'] ?? ''); ?>"
-                                        data-thanh_phan_hoat_chat="<?php echo htmlspecialchars($product['thanh_phan_hoat_chat'] ?? ''); ?>"
-                                        data-dang_bao_che="<?php echo htmlspecialchars($product['dang_bao_che'] ?? ''); ?>"
-                                        data-ham_luong="<?php echo htmlspecialchars($product['ham_luong'] ?? ''); ?>"
-                                        onclick="openEditModal(this)">
-                                        <i class="fas fa-edit"></i> Sửa
-                                    </button>
-                                </td>
-                                <?php endif; ?>
-                                <?php if (checkPermission('products_delete')): ?>
-                                <td>
-                                    <a href="?permanent_delete=<?php echo $product['ma_san_pham']; ?>" 
-                                       class="btn btn-danger" 
-                                       onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này?')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </td>
-                                <?php endif; ?>
-                            </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+
+                <!-- Search and Filter Section -->
+                <div class="search-filters">
+                    <form method="GET" class="search-form">
+                        <input type="text" name="search" class="search-input" placeholder="Tìm kiếm sản phẩm..." value="<?php echo htmlspecialchars($search); ?>">
+                        
+                        <select name="filter" class="filter-select">
+                            <option value="">Tất cả sản phẩm</option>
+                            <option value="low_stock" <?php echo $filter === 'low_stock' ? 'selected' : ''; ?>>Sắp hết hàng</option>
+                        </select>
+                        
+                        <button type="submit" class="btn-search">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                        
+                        <?php if ($search || $filter): ?>
+                        <a href="products.php" class="btn-clear">
+                            <i class="fas fa-times"></i> Xóa bộ lọc
+                        </a>
+                        <?php endif; ?>
+                        
+                        <?php if (checkPermission('products_add')): ?>
+                        <button type="button" class="btn btn-primary" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Thêm sản phẩm
+                        </button>
+                        <?php else: ?>
+                        <button type="button" class="btn btn-secondary" disabled title="Bạn không có quyền thêm sản phẩm">
+                            <i class="fas fa-plus"></i> Thêm sản phẩm
+                        </button>
+                        <?php endif; ?>
+                    </form>
+                </div>
+
+                <!-- Products Table -->
+                <div class="product-table">
+                    <div class="table-header">
+                        <h3><i class="fas fa-list"></i> Danh sách sản phẩm (<?php echo $total_products; ?>)</h3>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Hình ảnh</th>
+                                    <th>Thông tin sản phẩm</th>
+                                    <th>Danh mục</th>
+                                    <th>Nhà sản xuất</th>
+                                    <th>Giá bán</th>
+                                    <th>Tồn kho</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($product = $products->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <?php
+                                        // Lấy hình ảnh sản phẩm
+                                        $img_sql = "SELECT duong_dan_hinh_anh FROM hinh_anh_san_pham WHERE ma_san_pham = ? AND la_hinh_chinh = 1 LIMIT 1";
+                                        $img_stmt = $conn->prepare($img_sql);
+                                        $img_stmt->bind_param("i", $product['ma_san_pham']);
+                                        $img_stmt->execute();
+                                        $img_result = $img_stmt->get_result();
+                                        $img_row = $img_result->fetch_assoc();
+                                        $img_url = $img_row ? '../' . $img_row['duong_dan_hinh_anh'] : '../images/products/default.jpg';
+                                        ?>
+                                        <img src="<?php echo htmlspecialchars($img_url); ?>" 
+                                             alt="<?php echo htmlspecialchars($product['ten_san_pham']); ?>" 
+                                             class="product-image"
+                                             onerror="this.src='../images/products/default.jpg'">
+                                    </td>
+                                    <td>
+                                        <div class="product-info">
+                                            <div class="product-name"><?php echo htmlspecialchars($product['ten_san_pham']); ?></div>
+                                            <div class="product-meta">
+                                                SKU: <?php echo htmlspecialchars($product['ma_sku'] ?? 'N/A'); ?>
+                                            </div>
+                                            <div class="product-badges">
+                                                <?php if ($product['san_pham_noi_bat']): ?>
+                                                    <span class="badge badge-featured">Nổi bật</span>
+                                                <?php endif; ?>
+                                                <?php if ($product['is_flash_sale']): ?>
+                                                    <span class="badge badge-sale">SALE</span>
+                                                <?php endif; ?>
+                                                <?php if ($product['gia_khuyen_mai']): ?>
+                                                    <span class="badge" style="background: #27ae60; color: white;">Khuyến mãi</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($product['ten_danh_muc']); ?></td>
+                                    <td><?php echo htmlspecialchars($product['ten_nha_san_xuat']); ?></td>
+                                    <td>
+                                        <div class="product-price">
+                                            <?php if ($product['gia_khuyen_mai']): ?>
+                                                <span class="price-current"><?php echo number_format($product['gia_khuyen_mai']); ?>đ</span>
+                                                <span class="price-original"><?php echo number_format($product['gia_ban']); ?>đ</span>
+                                            <?php else: ?>
+                                                <span class="price-current"><?php echo number_format($product['gia_ban']); ?>đ</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="stock-info">
+                                            <span class="<?php echo $product['so_luong_ton_kho'] <= 10 ? 'stock-low' : 'stock-normal'; ?>">
+                                                <?php echo $product['so_luong_ton_kho']; ?>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $product['trang_thai_hoat_dong'] ? 'badge-active' : 'badge-inactive'; ?>">
+                                            <?php echo $product['trang_thai_hoat_dong'] ? 'Hoạt động' : 'Ngừng bán'; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <?php if (checkPermission('products_edit')): ?>
+                                            <button class="btn btn-info btn-sm" 
+                                                data-id="<?php echo $product['ma_san_pham'] ?? ''; ?>"
+                                                data-ten="<?php echo htmlspecialchars($product['ten_san_pham'] ?? ''); ?>"
+                                                data-danhmuc="<?php echo $product['ma_danh_muc'] ?? ''; ?>"
+                                                data-nhasx="<?php echo $product['ma_nha_san_xuat'] ?? ''; ?>"
+                                                data-mota="<?php echo htmlspecialchars($product['mo_ta'] ?? ''); ?>"
+                                                data-giaban="<?php echo htmlspecialchars((string)($product['gia_ban'] ?? '')); ?>"
+                                                data-giakm="<?php echo htmlspecialchars((string)($product['gia_khuyen_mai'] ?? '')); ?>"
+                                                data-tonkho="<?php echo htmlspecialchars((string)($product['so_luong_ton_kho'] ?? '')); ?>"
+                                                data-noibat="<?php echo $product['san_pham_noi_bat'] ?? 0; ?>"
+                                                data-flashsale="<?php echo $product['is_flash_sale'] ?? 0; ?>"
+                                                data-img="<?php echo htmlspecialchars((string)($img_row['duong_dan_hinh_anh'] ?? '')); ?>"
+                                                data-quy_cach_dong_goi="<?php echo htmlspecialchars($product['quy_cach_dong_goi'] ?? ''); ?>"
+                                                data-can_don_thuoc="<?php echo $product['can_don_thuoc'] ?? 0; ?>"
+                                                data-so_lo="<?php echo htmlspecialchars($product['so_lo'] ?? ''); ?>"
+                                                data-ma_vach="<?php echo htmlspecialchars($product['ma_vach'] ?? ''); ?>"
+                                                data-ma_sku="<?php echo htmlspecialchars($product['ma_sku'] ?? ''); ?>"
+                                                data-trong_luong="<?php echo htmlspecialchars((string)($product['trong_luong'] ?? '')); ?>"
+                                                data-dieu_kien_bao_quan="<?php echo htmlspecialchars($product['dieu_kien_bao_quan'] ?? ''); ?>"
+                                                data-tac_dung_phu="<?php echo htmlspecialchars($product['tac_dung_phu'] ?? ''); ?>"
+                                                data-chong_chi_dinh="<?php echo htmlspecialchars($product['chong_chi_dinh'] ?? ''); ?>"
+                                                data-huong_dan_su_dung="<?php echo htmlspecialchars($product['huong_dan_su_dung'] ?? ''); ?>"
+                                                data-gioi_han_tuoi="<?php echo htmlspecialchars($product['gioi_han_tuoi'] ?? ''); ?>"
+                                                data-trang_thai_hoat_dong="<?php echo $product['trang_thai_hoat_dong'] ?? 0; ?>"
+                                                data-ten_hoat_chat="<?php echo htmlspecialchars($product['ten_hoat_chat'] ?? ''); ?>"
+                                                data-thanh_phan_hoat_chat="<?php echo htmlspecialchars($product['thanh_phan_hoat_chat'] ?? ''); ?>"
+                                                data-dang_bao_che="<?php echo htmlspecialchars($product['dang_bao_che'] ?? ''); ?>"
+                                                data-ham_luong="<?php echo htmlspecialchars($product['ham_luong'] ?? ''); ?>"
+                                                onclick="openEditModal(this)">
+                                                <i class="fas fa-edit"></i> Sửa
+                                            </button>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (checkPermission('products_delete')): ?>
+                                            <button class="btn btn-danger btn-sm" 
+                                                data-product-id="<?php echo $product['ma_san_pham']; ?>"
+                                                data-product-name="<?php echo htmlspecialchars($product['ten_san_pham']); ?>"
+                                                onclick="deleteProduct(this.dataset.productId, this.dataset.productName)">
+                                                <i class="fas fa-trash"></i> Xóa
+                                            </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
 
                     <!-- Pagination -->
                     <?php if ($total_pages > 1): ?>
@@ -1113,34 +1489,82 @@ $manufacturers = $conn->query("SELECT * FROM nha_san_xuat WHERE trang_thai_hoat_
                     </div>
                 </form>
             </div>
+            </div>
         </div>
     </div>
 
+    <script src="js/admin.js"></script>
     <script>
         function openModal() {
-            document.getElementById('addModal').style.display = 'flex';
+            console.log('Opening add modal...');
+            const modal = document.getElementById('addModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            } else {
+                console.error('Modal addModal not found');
+            }
         }
 
         function closeModal() {
-            document.getElementById('addModal').style.display = 'none';
+            console.log('Closing add modal...');
+            const modal = document.getElementById('addModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Hàm xóa sản phẩm
+        function deleteProduct(id, name) {
+            console.log('Delete product called:', id, name);
+            if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${name}"?\n\nHành động này không thể hoàn tác!`)) {
+                window.location.href = `?permanent_delete=${id}`;
+            }
         }
 
         // Đóng modal khi click bên ngoài
         window.onclick = function(event) {
-            const modal = document.getElementById('addModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
+            const addModal = document.getElementById('addModal');
+            const editModal = document.getElementById('editModal');
+            
+            if (event.target === addModal) {
+                addModal.style.display = 'none';
+            }
+            if (event.target === editModal) {
+                editModal.style.display = 'none';
             }
         }
 
         // Tự động ẩn thông báo sau 5 giây
         setTimeout(function() {
-            const alert = document.querySelector('.alert');
-            if (alert) {
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 300);
-            }
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                if (alert) {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        if (alert.parentNode) {
+                            alert.remove();
+                        }
+                    }, 300);
+                }
+            });
         }, 5000);
+
+        // Enhanced alert interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click to dismiss functionality
+            document.querySelectorAll('.alert').forEach(alert => {
+                alert.addEventListener('click', function() {
+                    this.style.opacity = '0';
+                    this.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        if (this.parentNode) {
+                            this.remove();
+                        }
+                    }, 300);
+                });
+            });
+        });
 
         function openEditModal(btn) {
             // Debug: In ra console để kiểm tra dữ liệu

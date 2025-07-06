@@ -192,7 +192,7 @@ $stats = $stats_result->fetch_assoc();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý đánh giá sản phẩm - Admin VitaMeds</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <style>
         .stats-grid {
             display: grid;
@@ -370,12 +370,17 @@ $stats = $stats_result->fetch_assoc();
     </style>
 </head>
 <body>
-    <?php include 'header.php'; ?>
-
-    <div class="admin-container">
-        <div class="admin-header">
-            <h1><i class="fas fa-star"></i> Quản lý đánh giá sản phẩm</h1>
-        </div>
+    <div class="admin-wrapper">
+        <?php include '../includes/sidebar-admin.php'; ?>
+        
+        <div class="main-content">
+            <?php 
+            $page_title = 'Quản lý đánh giá sản phẩm';
+            $page_icon = 'fas fa-star';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
 
         <?php if ($success_message): ?>
             <div class="alert alert-success">
@@ -563,6 +568,10 @@ $stats = $stats_result->fetch_assoc();
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+            </div>
+        </div>
     </div>
+    
+    <script src="js/admin.js"></script>
 </body>
 </html> 

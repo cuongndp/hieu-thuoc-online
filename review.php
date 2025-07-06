@@ -86,8 +86,8 @@ if ($product_id > 0) {
         if (!has_user_purchased_product($user_id, $product_id, $conn)) {
             $error_message = "Bạn chưa mua sản phẩm này!";
         }
-        // Kiểm tra xem đã đánh giá chưa (theo từng đơn hàng)
-        if (empty($success_message) && has_user_reviewed_product($user_id, $product_id, $order_id, $conn)) {
+        // Kiểm tra xem đã đánh giá chưa (chỉ kiểm tra khi có order_id)
+        if (empty($success_message) && $order_id > 0 && has_user_reviewed_product($user_id, $product_id, $order_id, $conn)) {
             $error_message = "Bạn đã đánh giá sản phẩm này trong đơn hàng này rồi!";
         }
     }

@@ -412,13 +412,13 @@ $category_stats = $conn->query($category_stats_sql);
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="header">
-                <h1>Bảng điều khiển</h1>
-                <div class="user-info">
-                    <span>Xin chào, <?php echo htmlspecialchars($_SESSION['ho_ten']); ?></span>
-                    <a href="logout.php" class="logout-btn">Đăng xuất</a>
-                </div>
-            </div>
+            <?php 
+            $page_title = 'Bảng điều khiển';
+            $page_icon = 'fas fa-tachometer-alt';
+            include '../includes/admin-header.php'; 
+            ?>
+            
+            <div class="dashboard-content">
 
             <!-- Alerts -->
             <?php if ($product_stats['sp_sap_het'] > 0): ?>
@@ -619,7 +619,10 @@ $category_stats = $conn->query($category_stats_sql);
                     </table>
                 </div>
             </div>
+            </div>
         </div>
     </div>
+    
+    <script src="js/admin.js"></script>
 </body>
 </html>

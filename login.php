@@ -225,7 +225,7 @@ $show_register = isset($show_register) ? (bool)$show_register : false;
 
         <!-- Right side - Auth Forms -->
         <div class="auth-form-container">
-            <!-- Login Form -->
+            <!-- login Form -->
             <div class="auth-form <?php echo !$show_register ? 'active' : ''; ?>" id="login-form">
                 <div class="form-title">
                     <h2>Đăng Nhập</h2>

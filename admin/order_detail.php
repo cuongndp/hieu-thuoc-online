@@ -136,7 +136,56 @@ $status_options = [
         .status-form select { padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; }
         .status-form button { padding: 6px 16px; border-radius: 6px; background: #3498db; color: #fff; border: none; margin-left: 10px; cursor: pointer; }
         .status-form button:hover { background: #2980b9; }
-        @media (max-width: 600px) { .order-detail-container { padding: 10px; } .order-meta { flex-direction: column; gap: 10px; } }
+        @media (max-width: 768px) { 
+            .order-detail-container { 
+                padding: 15px; 
+                margin: 20px auto; 
+            } 
+            .order-meta { 
+                flex-direction: column; 
+                gap: 15px; 
+            }
+            .order-meta > div {
+                min-width: auto;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            table {
+                font-size: 14px;
+            }
+            th, td {
+                padding: 8px 4px;
+            }
+            .product-img {
+                width: 50px;
+                height: 50px;
+            }
+            .status-form {
+                margin-top: 8px;
+            }
+            .status-form select {
+                font-size: 14px;
+                padding: 5px 8px;
+            }
+            .status-form button {
+                font-size: 14px;
+                padding: 5px 12px;
+                margin-left: 5px;
+            }
+            .back-link {
+                margin-top: 20px;
+                padding: 10px 15px;
+                background: #3498db;
+                color: white;
+                border-radius: 6px;
+                text-decoration: none;
+            }
+            .back-link:hover {
+                background: #2980b9;
+                text-decoration: none;
+            }
+        }
     </style>
 </head>
 <body>

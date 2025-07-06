@@ -8,16 +8,10 @@ function add_product_review($user_id, $product_id, $order_id, $rating, $title, $
     try {
         $conn->autocommit(FALSE);
         
-        // Kiểm tra xem user đã đánh giá sản phẩm này chưa
-        $check_sql = "SELECT ma_danh_gia FROM danh_gia_san_pham WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
-        $check_stmt = $conn->prepare($check_sql);
-        $check_stmt->bind_param("ii", $user_id, $product_id);
-        $check_stmt->execute();
-        
-        if ($check_stmt->get_result()->num_rows > 0) {
-            throw new Exception("Bạn đã đánh giá sản phẩm này rồi!");
+        // Kiểm tra xem user đã đánh giá sản phẩm này trong đơn hàng này chưa
+        if (has_user_reviewed_product($user_id, $product_id, $order_id, $conn)) {
+            throw new Exception("Bạn đã đánh giá sản phẩm này trong đơn hàng này rồi!");
         }
-        $check_stmt->close();
         
         // Thêm đánh giá mới
         $insert_sql = "INSERT INTO danh_gia_san_pham (ma_nguoi_dung, ma_san_pham, ma_don_hang, so_sao, tieu_de, noi_dung, trang_thai) 
@@ -152,7 +146,7 @@ function has_user_purchased_product($user_id, $product_id, $conn) {
 }
 
 /**
- * Kiểm tra xem user đã đánh giá sản phẩm chưa
+ * Kiểm tra xem user đã đánh giá sản phẩm trong đơn hàng cụ thể chưa
  */
 function has_user_reviewed_product($user_id, $product_id, $order_id, $conn) {
     $sql = "SELECT COUNT(*) as count 
@@ -160,6 +154,22 @@ function has_user_reviewed_product($user_id, $product_id, $order_id, $conn) {
             WHERE ma_nguoi_dung = ? AND ma_san_pham = ? AND ma_don_hang = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("iii", $user_id, $product_id, $order_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $stmt->close();
+    return $row['count'] > 0;
+}
+
+/**
+ * Kiểm tra xem user đã từng đánh giá sản phẩm này hay chưa (bất kể đơn hàng nào)
+ */
+function has_user_ever_reviewed_product($user_id, $product_id, $conn) {
+    $sql = "SELECT COUNT(*) as count 
+            FROM danh_gia_san_pham 
+            WHERE ma_nguoi_dung = ? AND ma_san_pham = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $user_id, $product_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
